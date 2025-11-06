@@ -28,6 +28,6 @@
     <string name="sign_in">Sign In</string>
     <string name="sign_up">Sign Up</string>
     <string name="sign_out">Sign Out</string>
-    <string name="refresh_posts">Обновить</string>
-    <string name="loading_posts">Загрузка...</string>
+    <string name="refresh_posts">refresh_posts</string>
+    <string name="loading_posts">loading_posts</string>
 </resources>

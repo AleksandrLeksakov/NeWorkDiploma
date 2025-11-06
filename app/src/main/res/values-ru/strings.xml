@@ -29,4 +29,6 @@
     <string name="sign_in">Вход</string>
     <string name="sign_up">Регистрация</string>
     <string name="sign_out">Выход</string>
+    <string name="refresh_posts">Обновить</string>
+    <string name="loading_posts">Загрузка...</string>
 </resources>

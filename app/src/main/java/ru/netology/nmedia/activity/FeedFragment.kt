@@ -126,11 +126,11 @@ class FeedFragment : Fragment() {
 
             when {
                 state.loading -> {
-                    binding.refreshPrependButton.text = "Загрузка..."
+                    binding.refreshPrependButton//.text = "Загрузка..."
                 }
 
                 state.refreshPrependCount > 0 -> {
-                    binding.refreshPrependButton.text = "Обновить"
+                    binding.refreshPrependButton//.text = "Обновить"
                     Snackbar.make(
                         binding.root,
                         "Загружено ${state.refreshPrependCount} новых постов",
@@ -143,7 +143,7 @@ class FeedFragment : Fragment() {
                 }
 
                 state.error -> {
-                    binding.refreshPrependButton.text = "Обновить"
+                    binding.refreshPrependButton//.text = "Обновить"
                     Snackbar.make(
                         binding.root,
                         "Ошибка загрузки новых постов",
@@ -152,7 +152,7 @@ class FeedFragment : Fragment() {
                 }
 
                 else -> {
-                    binding.refreshPrependButton.text = "Обновить"
+                    binding.refreshPrependButton//.text = "Обновить"
                 }
             }
         }
