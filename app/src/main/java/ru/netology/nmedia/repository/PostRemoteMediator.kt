@@ -33,12 +33,10 @@ class PostRemoteMediator(
         try {
             val response = when (loadType) {
                 LoadType.REFRESH -> {
-                    // REFRESH: загружаем свежие данные, но не удаляем старые
-                    val latestPosts = service.getLatest(state.config.initialLoadSize)
+                    // Флаг НЕ сбрасываем здесь!
                     if (isInitialLoad) {
-                        // При первом запуске очищаем БД
-                        isInitialLoad = false
-                        latestPosts
+                        // При первом запуске загружаем начальные данные
+                        service.getLatest(state.config.initialLoadSize)
                     } else {
                         // При последующих refresh - загружаем только новые данные
                         val maxId = postRemoteKeyDao.max()
@@ -79,14 +77,13 @@ class PostRemoteMediator(
             db.withTransaction {
                 when (loadType) {
                     LoadType.REFRESH -> {
+                        // Все проверки ДО сброса флага
                         if (isInitialLoad) {
                             // При первом запуске очищаем всё
                             postRemoteKeyDao.removeAll()
                             postDao.removeAll()
-                        } else {
-                            // При последующих REFRESH очищаем только ключи
-                            postRemoteKeyDao.removeAll()
                         }
+                        // При последующих REFRESH НЕ очищаем ключи и БД
 
                         // Всегда вставляем AFTER ключ
                         postRemoteKeyDao.insert(
@@ -97,16 +94,8 @@ class PostRemoteMediator(
                         )
 
                         //BEFORE ключ обновляем только если БД не пуста
-                        // Проверяем, есть ли посты в БД (кроме тех, которые мы только что вставили)
-                        val hasExistingPosts = if (isInitialLoad) {
-                            false // При первом запуске БД была очищена, так что постов нет
-                        } else {
-                            // Проверяем, были ли посты в БД до этого refresh
-                            // Если это не первый запуск и мы не очищали БД, значит посты есть
-                            true
-                        }
-
-                        if (hasExistingPosts) {
+                        // Проверяем ДО сброса флага
+                        if (!isInitialLoad) {
                             postRemoteKeyDao.insert(
                                 PostRemoteKeyEntity(
                                     type = PostRemoteKeyEntity.KeyType.BEFORE,
@@ -114,10 +103,15 @@ class PostRemoteMediator(
                                 )
                             )
                         }
+
+                        // 🟡 ИСПРАВЛЕНИЕ: Сбрасываем флаг ПОСЛЕ всех проверок
+                        if (isInitialLoad) {
+                            isInitialLoad = false
+                        }
                     }
 
                     LoadType.PREPEND -> {
-
+                        // PREPEND отключен - ничего не делаем
                     }
 
                     LoadType.APPEND -> {
