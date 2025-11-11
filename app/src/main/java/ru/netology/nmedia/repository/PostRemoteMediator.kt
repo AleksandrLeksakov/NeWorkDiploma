@@ -93,9 +93,9 @@ class PostRemoteMediator(
                             )
                         )
 
-                        //BEFORE ключ обновляем только если БД не пуста
+                        //BEFORE ключ обновляем только если БД пуста
                         // Проверяем ДО сброса флага
-                        if (!isInitialLoad) {
+                        if (isInitialLoad) { // <---
                             postRemoteKeyDao.insert(
                                 PostRemoteKeyEntity(
                                     type = PostRemoteKeyEntity.KeyType.BEFORE,
@@ -104,7 +104,8 @@ class PostRemoteMediator(
                             )
                         }
 
-                        // 🟡 ИСПРАВЛЕНИЕ: Сбрасываем флаг ПОСЛЕ всех проверок
+
+                        //  Сбрасываем флаг ПОСЛЕ всех проверок
                         if (isInitialLoad) {
                             isInitialLoad = false
                         }
