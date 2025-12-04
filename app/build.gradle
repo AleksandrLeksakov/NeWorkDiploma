@@ -4,6 +4,24 @@ apply plugin: 'com.google.devtools.ksp' // вместо устаревшего '
 apply plugin: 'com.google.gms.google-services'
 apply plugin: 'dagger.hilt.android.plugin'
 
+
+
+def secretProperties = new Properties()
+def secretPropertiesFile = rootProject.file('secret.properties')
+if (secretPropertiesFile.exists()) {
+    secretPropertiesFile.withReader('UTF-8') { reader ->
+        secretProperties.load(reader)
+    }
+}
+
+def apiKey = secretProperties.getProperty('API_KEY', '')
+
+android {
+    defaultConfig {
+        buildConfigField "String", "API_KEY", "\"$apiKey\""
+    }
+}
+
 android {
     namespace "ru.netology.nmedia"
 
@@ -15,11 +33,15 @@ android {
         targetSdkVersion 36
         versionCode 1
         versionName "1.0"
+
+
+        // Используем API ключ из secret.properties
+        buildConfigField "String", "API_KEY", "\"$apiKey\""
+        buildConfigField "String", "BASE_URL", '"http://94.228.125.136:8080/"'
     }
 
     compileOptions {
         coreLibraryDesugaringEnabled true
-
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
     }
@@ -39,12 +61,12 @@ android {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
             manifestPlaceholders.usesCleartextTraffic = false
-            buildConfigField "String", "BASE_URL", '"https://netomedia.ru"'
+            buildConfigField "String", "BASE_URL", '"https://94.228.125.136:8080/"'
         }
         debug {
             manifestPlaceholders.usesCleartextTraffic = true
            // buildConfigField "String", "BASE_URL", '"http://10.0.2.2:9999"'
-            buildConfigField "String", "BASE_URL", '"http://192.168.1.15:9999"'
+            buildConfigField "String", "BASE_URL", '"http://94.228.125.136:8080/"'
         }
     }
 }

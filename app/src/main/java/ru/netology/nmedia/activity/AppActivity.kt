@@ -5,6 +5,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import android.view.Menu
 import android.view.MenuInflater
 import android.view.MenuItem
@@ -20,11 +21,13 @@ import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability
 import com.google.firebase.messaging.FirebaseMessaging
 import dagger.hilt.android.AndroidEntryPoint
+import ru.netology.nmedia.BuildConfig
 import ru.netology.nmedia.R
 import ru.netology.nmedia.auth.AppAuth
 import ru.netology.nmedia.repository.PostRepository
 import ru.netology.nmedia.activity.NewPostFragment.Companion.textArg
 import ru.netology.nmedia.databinding.ActivityAppBinding
+import ru.netology.nmedia.util.ConfigChecker
 import ru.netology.nmedia.viewmodel.AuthViewModel
 import javax.inject.Inject
 
@@ -39,6 +42,23 @@ class AppActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+
+        // ЯВНАЯ ПРОВЕРКА С ТОСТАМИ
+        val isConfigured = ConfigChecker.isApiKeyConfigured()
+
+        if (isConfigured) {
+            Toast.makeText(this, "✅ API ключ настроен", Toast.LENGTH_SHORT).show()
+        } else {
+            Toast.makeText(
+                this,
+                "❌ API ключ НЕ настроен!\nСоздайте secret.properties",
+                Toast.LENGTH_LONG
+            ).show()
+        }
+
+        // Запускаем полную проверку
+        ConfigChecker.checkApiConfig()
 
         enableEdgeToEdge()
 
