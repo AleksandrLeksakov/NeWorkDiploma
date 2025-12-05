@@ -5,10 +5,10 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
-import android.util.Log
 import android.view.Menu
 import android.view.MenuInflater
 import android.view.MenuItem
+import android.view.View
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
@@ -17,22 +17,22 @@ import androidx.core.view.MenuProvider
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.navigation.findNavController
+import androidx.navigation.ui.setupWithNavController
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability
 import com.google.firebase.messaging.FirebaseMessaging
 import dagger.hilt.android.AndroidEntryPoint
-import ru.netology.nmedia.BuildConfig
 import ru.netology.nmedia.R
 import ru.netology.nmedia.auth.AppAuth
 import ru.netology.nmedia.repository.PostRepository
 import ru.netology.nmedia.activity.NewPostFragment.Companion.textArg
 import ru.netology.nmedia.databinding.ActivityAppBinding
-import ru.netology.nmedia.util.ConfigChecker
+
 import ru.netology.nmedia.viewmodel.AuthViewModel
 import javax.inject.Inject
 
 @AndroidEntryPoint
-class AppActivity : AppCompatActivity() {
+class MainActivity : AppCompatActivity() {
     @Inject
     lateinit var repository: PostRepository
 
@@ -40,29 +40,16 @@ class AppActivity : AppCompatActivity() {
     lateinit var auth: AppAuth
     private val viewModel: AuthViewModel by viewModels()
 
+    // ДОБАВЬТЕ ЭТО - делаем binding полем класса
+    private lateinit var binding: ActivityAppBinding
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-
-        // ЯВНАЯ ПРОВЕРКА С ТОСТАМИ
-        val isConfigured = ConfigChecker.isApiKeyConfigured()
-
-        if (isConfigured) {
-            Toast.makeText(this, "✅ API ключ настроен", Toast.LENGTH_SHORT).show()
-        } else {
-            Toast.makeText(
-                this,
-                "❌ API ключ НЕ настроен!\nСоздайте secret.properties",
-                Toast.LENGTH_LONG
-            ).show()
-        }
-
-        // Запускаем полную проверку
-        ConfigChecker.checkApiConfig()
-
         enableEdgeToEdge()
 
-        val binding = ActivityAppBinding.inflate(layoutInflater)
+        // УБРАТЬ val - используем поле класса
+        binding = ActivityAppBinding.inflate(layoutInflater)
         setContentView(binding.root)
         ViewCompat.setOnApplyWindowInsetsListener(binding.root) { v, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
@@ -89,6 +76,8 @@ class AppActivity : AppCompatActivity() {
                     }
                 )
         }
+
+        setupBottomNavigation()  // Теперь будет работать
 
         viewModel.data.observe(this) {
             invalidateOptionsMenu()
@@ -144,6 +133,35 @@ class AppActivity : AppCompatActivity() {
         })
     }
 
+    // ДОБАВЬТЕ ЭТОТ МЕТОД
+    private fun setupBottomNavigation() {
+        val navController = findNavController(R.id.nav_host_fragment)
+
+        // Проверяем что BottomNavigationView существует
+        if (!this::binding.isInitialized) {
+            println("❌ Binding не инициализирован")
+            return
+        }
+
+        // Связываем BottomNavigation с NavController
+        binding.bottomNavigation.setupWithNavController(navController)
+
+        // Скрываем BottomNavigation на некоторых экранах
+        navController.addOnDestinationChangedListener { _, destination, _ ->
+            val showBottomNav = destination.id in setOf(
+                R.id.feedFragment,
+                R.id.eventsFragment,
+                R.id.usersFragment
+            )
+            binding.bottomNavigation.visibility = if (showBottomNav) View.VISIBLE else View.GONE
+
+            // Отладка
+            println("🎯 Переход к: ${destination.id}, showBottomNav: $showBottomNav")
+        }
+
+        println("✅ BottomNavigation настроен")
+    }
+
     private fun requestNotificationsPermission() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
             return
@@ -160,15 +178,15 @@ class AppActivity : AppCompatActivity() {
 
     private fun checkGoogleApiAvailability() {
         with(GoogleApiAvailability.getInstance()) {
-            val code = isGooglePlayServicesAvailable(this@AppActivity)
+            val code = isGooglePlayServicesAvailable(this@MainActivity)
             if (code == ConnectionResult.SUCCESS) {
                 return@with
             }
             if (isUserResolvableError(code)) {
-                getErrorDialog(this@AppActivity, code, 9000)?.show()
+                getErrorDialog(this@MainActivity, code, 9000)?.show()
                 return
             }
-            Toast.makeText(this@AppActivity, R.string.google_play_unavailable, Toast.LENGTH_LONG)
+            Toast.makeText(this@MainActivity, R.string.google_play_unavailable, Toast.LENGTH_LONG)
                 .show()
         }
     }

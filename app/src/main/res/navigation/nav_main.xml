@@ -5,10 +5,11 @@
     android:id="@+id/nav_main"
     app:startDestination="@id/feedFragment">
 
+    <!--FeedFragment -->
     <fragment
         android:id="@+id/feedFragment"
         android:name="ru.netology.nmedia.activity.FeedFragment"
-        android:label="fragment_feed"
+        android:label="Посты"
         tools:layout="@layout/fragment_feed">
         <action
             android:id="@+id/action_feedFragment_to_newPostFragment"
@@ -18,9 +19,26 @@
             app:popEnterAnim="@android:anim/fade_in"
             app:popExitAnim="@android:anim/fade_out" />
     </fragment>
+
+    <!--EventsFragment -->
+    <fragment
+        android:id="@+id/eventsFragment"
+        android:name="ru.netology.nmedia.fragments.EventsFragment"
+        android:label="События"
+        tools:layout="@layout/fragment_events" />
+
+    <!--UsersFragment -->
+    <fragment
+        android:id="@+id/usersFragment"
+        android:name="ru.netology.nmedia.fragments.UsersFragment"
+        android:label="Пользователи"
+        tools:layout="@layout/fragment_users" />
+
+    <!--  NewPostFragment -->
     <fragment
         android:id="@+id/newPostFragment"
         android:name="ru.netology.nmedia.activity.NewPostFragment"
-        android:label="fragment_new_post"
+        android:label="Новый пост"
         tools:layout="@layout/fragment_new_post" />
+
 </navigation>

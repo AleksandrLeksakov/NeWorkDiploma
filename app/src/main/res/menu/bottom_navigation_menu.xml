@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Посты -->
+    <item
+        android:id="@+id/feedFragment"
+        android:icon="@drawable/ic_netology_48dp"
+        android:title="Посты" />
+
+    <!-- События -->
+    <item
+        android:id="@+id/eventsFragment"
+        android:icon="@android:drawable/ic_dialog_info"
+        android:title="События" />
+
+    <!-- Пользователи -->
+    <item
+        android:id="@+id/usersFragment"
+        android:icon="@android:drawable/ic_dialog_dialer"
+        android:title="Пользователи" />
+
+</menu>
