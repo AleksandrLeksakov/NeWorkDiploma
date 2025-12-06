@@ -27,9 +27,10 @@ import ru.netology.nmedia.auth.AppAuth
 import ru.netology.nmedia.repository.PostRepository
 import ru.netology.nmedia.activity.NewPostFragment.Companion.textArg
 import ru.netology.nmedia.databinding.ActivityAppBinding
-
 import ru.netology.nmedia.viewmodel.AuthViewModel
 import javax.inject.Inject
+import androidx.navigation.fragment.NavHostFragment
+import androidx.navigation.NavController
 
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
@@ -40,7 +41,6 @@ class MainActivity : AppCompatActivity() {
     lateinit var auth: AppAuth
     private val viewModel: AuthViewModel by viewModels()
 
-    // ДОБАВЬТЕ ЭТО - делаем binding полем класса
     private lateinit var binding: ActivityAppBinding
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -48,9 +48,12 @@ class MainActivity : AppCompatActivity() {
 
         enableEdgeToEdge()
 
-        // УБРАТЬ val - используем поле класса
         binding = ActivityAppBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+        println("🎯 MainActivity onCreate начат")
+        Toast.makeText(this, "MainActivity запущен", Toast.LENGTH_SHORT).show()
+
         ViewCompat.setOnApplyWindowInsetsListener(binding.root) { v, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
@@ -77,7 +80,7 @@ class MainActivity : AppCompatActivity() {
                 )
         }
 
-        setupBottomNavigation()  // Теперь будет работать
+        setupBottomNavigation()
 
         viewModel.data.observe(this) {
             invalidateOptionsMenu()
@@ -99,7 +102,7 @@ class MainActivity : AppCompatActivity() {
 
         addMenuProvider(object : MenuProvider {
             override fun onCreateMenu(menu: Menu, menuInflater: MenuInflater) {
-                menuInflater.inflate(R.menu.menu_main, menu)
+                menuInflater.inflate(R.menu.menu_actionbar, menu)
 
                 menu.let {
                     it.setGroupVisible(R.id.unauthenticated, !viewModel.authenticated)
@@ -110,56 +113,141 @@ class MainActivity : AppCompatActivity() {
             override fun onMenuItemSelected(menuItem: MenuItem): Boolean =
                 when (menuItem.itemId) {
                     R.id.signin -> {
-                        // TODO: just hardcode it, implementation must be in homework
                         auth.setAuth(5, "x-token")
                         true
                     }
 
                     R.id.signup -> {
-                        // TODO: just hardcode it, implementation must be in homework
                         auth.setAuth(5, "x-token")
                         true
                     }
 
                     R.id.signout -> {
-                        // TODO: just hardcode it, implementation must be in homework
                         auth.removeAuth()
                         true
                     }
 
                     else -> false
                 }
-
         })
     }
 
-    // ДОБАВЬТЕ ЭТОТ МЕТОД
+    // ВАЖНО: ДОБАВЬТЕ ЭТОТ МЕТОД
     private fun setupBottomNavigation() {
-        val navController = findNavController(R.id.nav_host_fragment)
+        println("🔧 setupBottomNavigation() вызван")
 
-        // Проверяем что BottomNavigationView существует
         if (!this::binding.isInitialized) {
             println("❌ Binding не инициализирован")
             return
         }
 
-        // Связываем BottomNavigation с NavController
-        binding.bottomNavigation.setupWithNavController(navController)
+        // ВАЖНО: Ждем пока view будет полностью создан
+        binding.root.post {
+            try {
+                println("🔍 Ищем NavController после создания view...")
 
-        // Скрываем BottomNavigation на некоторых экранах
-        navController.addOnDestinationChangedListener { _, destination, _ ->
-            val showBottomNav = destination.id in setOf(
-                R.id.feedFragment,
-                R.id.eventsFragment,
-                R.id.usersFragment
-            )
-            binding.bottomNavigation.visibility = if (showBottomNav) View.VISIBLE else View.GONE
+                // Способ 1: Через FragmentContainerView
+                val navHostFragment = supportFragmentManager
+                    .findFragmentById(R.id.nav_host_fragment) as? NavHostFragment
 
-            // Отладка
-            println("🎯 Переход к: ${destination.id}, showBottomNav: $showBottomNav")
+                if (navHostFragment == null) {
+                    println("❌ NavHostFragment не найден")
+                    // Попробуем другой способ
+                    try {
+                        val navController = findNavController(R.id.nav_host_fragment)
+                        setupNavigation(navController)
+                    } catch (e: Exception) {
+                        println("❌ Не могу найти NavController: ${e.message}")
+                        Toast.makeText(this, "Ошибка навигации", Toast.LENGTH_LONG).show()
+                    }
+                    return@post
+                }
+
+                val navController = navHostFragment.navController
+                println("✅ NavController найден через NavHostFragment")
+                setupNavigation(navController)
+
+            } catch (e: Exception) {
+                println("❌ Критическая ошибка: ${e.message}")
+                e.printStackTrace()
+            }
         }
+    }
 
-        println("✅ BottomNavigation настроен")
+    private fun setupNavigation(navController: NavController) {
+        try {
+            // Проверяем BottomNavigationView
+            if (binding.bottomNavigation == null) {
+                println("❌ BottomNavigationView не найден в binding")
+
+                // Попробуем найти через findViewById
+                val bottomNav = findViewById<com.google.android.material.bottomnavigation.BottomNavigationView>(
+                    R.id.bottom_navigation
+                )
+                if (bottomNav == null) {
+                    println("❌ BottomNavigationView не найден вообще")
+                    Toast.makeText(this, "BottomNavigation не найден", Toast.LENGTH_LONG).show()
+                    return
+                }
+                println("✅ BottomNavigationView найден через findViewById")
+            } else {
+                println("✅ BottomNavigationView найден через binding")
+            }
+
+            // Связываем
+            binding.bottomNavigation.setupWithNavController(navController)
+            println("✅ BottomNavigation связан с NavController")
+
+            // Проверяем что меню загружено
+            val menu = binding.bottomNavigation.menu
+            println("📋 Меню BottomNavigation (${menu.size()} items):")
+            for (i in 0 until menu.size()) {
+                val item = menu.getItem(i)
+                val idName = try {
+                    resources.getResourceEntryName(item.itemId)
+                } catch (e: Exception) {
+                    "unknown_${item.itemId}"
+                }
+                println("  - ${item.title}: $idName (${item.itemId})")
+            }
+
+            // Настраиваем видимость
+            navController.addOnDestinationChangedListener { _, destination, _ ->
+                val idName = try {
+                    resources.getResourceEntryName(destination.id)
+                } catch (e: Exception) {
+                    "unknown_${destination.id}"
+                }
+                println("🎯 Навигация: $idName (${destination.id})")
+
+                val showBottomNav = destination.id in setOf(
+                    R.id.feedFragment,
+                    R.id.eventsFragment,
+                    R.id.usersFragment
+                )
+
+                binding.bottomNavigation.visibility = if (showBottomNav) View.VISIBLE else View.GONE
+                println("  BottomNavigation виден: $showBottomNav")
+            }
+
+            // Проверяем граф
+            println("🗺️ Граф навигации:")
+            navController.graph.forEach { destination ->
+                val destIdName = try {
+                    resources.getResourceEntryName(destination.id)
+                } catch (e: Exception) {
+                    "unknown_${destination.id}"
+                }
+               // println("  - $destIdName -> ${destination}")
+            }
+
+            Toast.makeText(this, "✅ BottomNavigation готов", Toast.LENGTH_SHORT).show()
+
+        } catch (e: Exception) {
+            println("❌ Ошибка настройки навигации: ${e.message}")
+            e.printStackTrace()
+            Toast.makeText(this, "Ошибка: ${e.message}", Toast.LENGTH_LONG).show()
+        }
     }
 
     private fun requestNotificationsPermission() {
