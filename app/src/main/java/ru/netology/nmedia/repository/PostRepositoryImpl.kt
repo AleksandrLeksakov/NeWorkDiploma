@@ -15,7 +15,6 @@ import ru.netology.nmedia.dto.Media
 import ru.netology.nmedia.dto.MediaUpload
 import ru.netology.nmedia.dto.Post
 import ru.netology.nmedia.entity.PostEntity
-import ru.netology.nmedia.entity.toEntity
 import ru.netology.nmedia.enumeration.AttachmentType
 import ru.netology.nmedia.error.ApiError
 import ru.netology.nmedia.error.AppError
@@ -33,16 +32,15 @@ class PostRepositoryImpl @Inject constructor(
     private val apiService: ApiService,
 ) : PostRepository {
 
-    // Создаем экземпляр PostRemoteMediator с доступом извне
     private val postRemoteMediator = PostRemoteMediator(apiService, appDb, postDao, postRemoteKeyDao)
 
     @OptIn(ExperimentalPagingApi::class)
     override val data: Flow<PagingData<Post>> = Pager(
         config = PagingConfig(pageSize = 25),
-        remoteMediator = PostRemoteMediator(apiService, appDb, postDao, postRemoteKeyDao),
+        remoteMediator = postRemoteMediator,
         pagingSourceFactory = postDao::pagingSource,
     ).flow.map { pagingData ->
-        pagingData.map(PostEntity::toDto)
+        pagingData.map { postEntity -> postEntity.toDto() }
     }
 
     override suspend fun getAll() {
@@ -53,7 +51,10 @@ class PostRepositoryImpl @Inject constructor(
             }
 
             val body = response.body() ?: throw ApiError(response.code(), response.message())
-            postDao.insert(body.toEntity())
+
+            // Исправляем преобразование
+            val posts = body.map { post -> PostEntity.fromDto(post) }
+            postDao.insert(posts)
         } catch (e: IOException) {
             throw NetworkError
         } catch (e: Exception) {
@@ -70,7 +71,10 @@ class PostRepositoryImpl @Inject constructor(
             }
 
             val body = response.body() ?: throw ApiError(response.code(), response.message())
-            postDao.insert(body.toEntity())
+
+            // Исправляем преобразование
+            val posts = body.map { post -> PostEntity.fromDto(post) }
+            postDao.insert(posts)
             emit(body.size)
         }
     }
@@ -81,9 +85,8 @@ class PostRepositoryImpl @Inject constructor(
         try {
             val postWithAttachment = upload?.let {
                 upload(it)
-            }?.let {
-                // TODO: add support for other types
-                post.copy(attachment = Attachment(it.id, AttachmentType.IMAGE))
+            }?.let { media ->
+                post.copy(attachment = Attachment(media.id, AttachmentType.IMAGE))
             }
             val response = apiService.save(postWithAttachment ?: post)
             if (!response.isSuccessful) {
@@ -91,6 +94,8 @@ class PostRepositoryImpl @Inject constructor(
             }
 
             val body = response.body() ?: throw ApiError(response.code(), response.message())
+
+            // Исправляем преобразование
             postDao.insert(PostEntity.fromDto(body))
         } catch (e: IOException) {
             throw NetworkError
@@ -100,11 +105,51 @@ class PostRepositoryImpl @Inject constructor(
     }
 
     override suspend fun removeById(id: Long) {
-        TODO("Not yet implemented")
+        try {
+            // Сначала удаляем локально
+            postDao.removeById(id)
+
+            // Затем на сервере
+            val response = apiService.removeById(id)
+            if (!response.isSuccessful) {
+                throw ApiError(response.code(), response.message())
+            }
+        } catch (e: IOException) {
+            throw NetworkError
+        } catch (e: Exception) {
+            throw UnknownError
+        }
     }
 
     override suspend fun likeById(id: Long) {
-        TODO("Not yet implemented")
+        try {
+            // Сначала обновляем локально
+            val post = postDao.getById(id) ?: return
+            val likedByMe = !post.likedByMe
+            val likes = if (likedByMe) post.likes + 1 else post.likes - 1
+
+            postDao.updateLikeById(id, likedByMe, likes)
+
+            // Затем на сервере
+            val response = if (likedByMe) {
+                apiService.likeById(id)
+            } else {
+                apiService.dislikeById(id)
+            }
+
+            if (!response.isSuccessful) {
+                throw ApiError(response.code(), response.message())
+            }
+
+            val body = response.body() ?: throw ApiError(response.code(), response.message())
+
+            // Обновляем локальные данные ответом сервера
+            postDao.insert(PostEntity.fromDto(body))
+        } catch (e: IOException) {
+            throw NetworkError
+        } catch (e: Exception) {
+            throw UnknownError
+        }
     }
 
     override suspend fun upload(upload: MediaUpload): Media {
@@ -126,11 +171,10 @@ class PostRepositoryImpl @Inject constructor(
         }
     }
 
-    //  метод для ручного обновления с добавлением данных сверху
     override suspend fun refreshPrepend(): List<Post> {
         return try {
             val newPosts = postRemoteMediator.refreshPrepend()
-            newPosts.map { it.toDto() }
+            newPosts.map { postEntity -> postEntity.toDto() }
         } catch (e: Exception) {
             if (e is IOException) {
                 throw NetworkError

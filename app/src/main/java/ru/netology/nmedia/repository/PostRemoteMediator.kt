@@ -10,9 +10,9 @@ import ru.netology.nmedia.api.ApiService
 import ru.netology.nmedia.dao.PostDao
 import ru.netology.nmedia.dao.PostRemoteKeyDao
 import ru.netology.nmedia.db.AppDb
+import ru.netology.nmedia.dto.Post
 import ru.netology.nmedia.entity.PostEntity
 import ru.netology.nmedia.entity.PostRemoteKeyEntity
-import ru.netology.nmedia.entity.toEntity
 import ru.netology.nmedia.error.ApiError
 
 @OptIn(ExperimentalPagingApi::class)
@@ -23,7 +23,6 @@ class PostRemoteMediator(
     private val postRemoteKeyDao: PostRemoteKeyDao,
 ) : RemoteMediator<Int, PostEntity>() {
 
-    // Добавляем флаг для отслеживания первого запуска
     private var isInitialLoad = true
 
     override suspend fun load(
@@ -33,12 +32,9 @@ class PostRemoteMediator(
         try {
             val response = when (loadType) {
                 LoadType.REFRESH -> {
-                    // Флаг НЕ сбрасываем здесь!
                     if (isInitialLoad) {
-                        // При первом запуске загружаем начальные данные
                         service.getLatest(state.config.initialLoadSize)
                     } else {
-                        // При последующих refresh - загружаем только новые данные
                         val maxId = postRemoteKeyDao.max()
                         if (maxId != null) {
                             service.getAfter(maxId, state.config.pageSize)
@@ -49,12 +45,10 @@ class PostRemoteMediator(
                 }
 
                 LoadType.PREPEND -> {
-                    // ОТКЛЮЧАЕМ автоматический PREPEND
                     return MediatorResult.Success(endOfPaginationReached = true)
                 }
 
                 LoadType.APPEND -> {
-                    // APPEND работает в обычном режиме
                     val id = postRemoteKeyDao.min() ?: return MediatorResult.Success(
                         endOfPaginationReached = false
                     )
@@ -65,7 +59,8 @@ class PostRemoteMediator(
             if (!response.isSuccessful) {
                 throw ApiError(response.code(), response.message())
             }
-            val body = response.body() ?: throw ApiError(
+
+            val body: List<Post> = response.body() ?: throw ApiError(
                 response.code(),
                 response.message(),
             )
@@ -77,15 +72,11 @@ class PostRemoteMediator(
             db.withTransaction {
                 when (loadType) {
                     LoadType.REFRESH -> {
-                        // Все проверки ДО сброса флага
                         if (isInitialLoad) {
-                            // При первом запуске очищаем всё
                             postRemoteKeyDao.removeAll()
                             postDao.removeAll()
                         }
-                        // При последующих REFRESH НЕ очищаем ключи и БД
 
-                        // Всегда вставляем AFTER ключ
                         postRemoteKeyDao.insert(
                             PostRemoteKeyEntity(
                                 type = PostRemoteKeyEntity.KeyType.AFTER,
@@ -93,9 +84,7 @@ class PostRemoteMediator(
                             )
                         )
 
-                        //BEFORE ключ обновляем только если БД пуста
-                        // Проверяем ДО сброса флага
-                        if (isInitialLoad) { // <---
+                        if (isInitialLoad) {
                             postRemoteKeyDao.insert(
                                 PostRemoteKeyEntity(
                                     type = PostRemoteKeyEntity.KeyType.BEFORE,
@@ -104,19 +93,12 @@ class PostRemoteMediator(
                             )
                         }
 
-
-                        //  Сбрасываем флаг ПОСЛЕ всех проверок
                         if (isInitialLoad) {
                             isInitialLoad = false
                         }
                     }
 
-                    LoadType.PREPEND -> {
-                        // PREPEND отключен - ничего не делаем
-                    }
-
                     LoadType.APPEND -> {
-                        // Обновляем ключ для APPEND
                         postRemoteKeyDao.insert(
                             PostRemoteKeyEntity(
                                 type = PostRemoteKeyEntity.KeyType.BEFORE,
@@ -124,11 +106,15 @@ class PostRemoteMediator(
                             )
                         )
                     }
+
+                    else -> { /* Do nothing for PREPEND */ }
                 }
 
-                // Вставляем новые посты (БД сама обработает конфликты через UNIQUE)
-                postDao.insert(body.toEntity())
+                // Используем правильное преобразование
+                val posts = body.map { post -> PostEntity.fromDto(post) }
+                postDao.insert(posts)
             }
+
             return MediatorResult.Success(endOfPaginationReached = false)
         } catch (e: Exception) {
             if (e is CancellationException) {
@@ -138,17 +124,16 @@ class PostRemoteMediator(
         }
     }
 
-    // Новый метод для ручного добавления данных сверху (refresh to prepend)
     suspend fun refreshPrepend(): List<PostEntity> {
         return try {
             val maxId = postRemoteKeyDao.max() ?: return emptyList()
-            val response = service.getAfter(maxId, 10) // Загружаем новые посты после текущего максимума
+            val response = service.getAfter(maxId, 10)
 
             if (!response.isSuccessful) {
                 throw ApiError(response.code(), response.message())
             }
 
-            val body = response.body() ?: throw ApiError(
+            val body: List<Post> = response.body() ?: throw ApiError(
                 response.code(),
                 response.message(),
             )
@@ -158,7 +143,6 @@ class PostRemoteMediator(
             }
 
             db.withTransaction {
-                // Обновляем AFTER ключ
                 postRemoteKeyDao.insert(
                     PostRemoteKeyEntity(
                         type = PostRemoteKeyEntity.KeyType.AFTER,
@@ -166,11 +150,11 @@ class PostRemoteMediator(
                     )
                 )
 
-                // Вставляем новые посты
-                postDao.insert(body.toEntity())
+                val posts = body.map { post -> PostEntity.fromDto(post) }
+                postDao.insert(posts)
             }
 
-            body.toEntity()
+            body.map { post -> PostEntity.fromDto(post) }
         } catch (e: Exception) {
             if (e is CancellationException) {
                 throw e

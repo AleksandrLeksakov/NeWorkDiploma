@@ -10,17 +10,11 @@ import ru.netology.nmedia.entity.PostEntity
 
 @Dao
 interface PostDao {
-    @Query("SELECT * FROM PostEntity ORDER BY id DESC")
+    @Query("SELECT * FROM posts ORDER BY id DESC")
     fun pagingSource(): PagingSource<Int, PostEntity>
 
-    @Query("SELECT * FROM PostEntity ORDER BY id DESC")
-    fun getAll(): Flow<List<PostEntity>>
-
-    @Query("SELECT COUNT(*) == 0 FROM PostEntity")
-    suspend fun isEmpty(): Boolean
-
-    @Query("SELECT COUNT(*) FROM PostEntity")
-    suspend fun count(): Int
+    @Query("SELECT * FROM posts WHERE id = :id")
+    suspend fun getById(id: Long): PostEntity?
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(post: PostEntity)
@@ -28,9 +22,12 @@ interface PostDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(posts: List<PostEntity>)
 
-    @Query("DELETE FROM PostEntity WHERE id = :id")
+    @Query("DELETE FROM posts WHERE id = :id")
     suspend fun removeById(id: Long)
 
-    @Query("DELETE FROM PostEntity")
+    @Query("DELETE FROM posts")
     suspend fun removeAll()
+
+    @Query("UPDATE posts SET liked_by_me = :likedByMe, likes = :likes WHERE id = :id")
+    suspend fun updateLikeById(id: Long, likedByMe: Boolean, likes: Int)
 }

@@ -17,17 +17,27 @@ import ru.netology.nmedia.model.FeedModelState
 import ru.netology.nmedia.model.PhotoModel
 import ru.netology.nmedia.repository.PostRepository
 import ru.netology.nmedia.util.SingleLiveEvent
+import java.time.Instant
 import javax.inject.Inject
 
+// Исправьте empty Post - published должно быть String
 private val empty = Post(
     id = 0,
     content = "",
     authorId = 0,
     author = "",
     authorAvatar = "",
+    authorJob = null,
     likedByMe = false,
     likes = 0,
-    published = 0,
+    published = Instant.now().toString(),  // String в ISO формате
+    likeOwnerIds = emptyList(),
+    mentionedMe = false,
+    mentionedIds = emptyList(),
+    attachment = null,
+    link = null,
+    ownedByMe = false,
+    coords = null
 )
 
 private val noPhoto = PhotoModel()
@@ -55,8 +65,6 @@ class PostViewModel @Inject constructor(
     val dataState: LiveData<FeedModelState>
         get() = _dataState
 
-
-    // состояние для ручного обновления сверху
     private val _prependState = MutableLiveData<FeedModelState>(FeedModelState())
     val prependState: LiveData<FeedModelState>
         get() = _prependState
@@ -77,7 +85,7 @@ class PostViewModel @Inject constructor(
     fun loadPosts() = viewModelScope.launch {
         try {
             _dataState.value = FeedModelState(loading = true)
-            // repository.stream.cachedIn(viewModelScope).
+            repository.getAll()
             _dataState.value = FeedModelState()
         } catch (e: Exception) {
             _dataState.value = FeedModelState(error = true)
@@ -87,15 +95,13 @@ class PostViewModel @Inject constructor(
     fun refreshPosts() = viewModelScope.launch {
         try {
             _dataState.value = FeedModelState(refreshing = true)
-//           Paging 3 автоматически обработает refresh через RemoteMediator
+            repository.getAll()
             _dataState.value = FeedModelState()
         } catch (e: Exception) {
             _dataState.value = FeedModelState(error = true)
         }
     }
 
-
-    // Новый метод для ручного обновления с добавлением данных сверху
     fun refreshPrepend() = viewModelScope.launch {
         try {
             _prependState.value = FeedModelState(loading = true, refreshing = true)
@@ -103,27 +109,33 @@ class PostViewModel @Inject constructor(
             _prependState.value = FeedModelState(
                 refreshPrependCount = newPosts.size
             )
-
-            // Если были добавлены новые посты, показываем уведомление
-            if (newPosts.isNotEmpty()) {
-                // Можно добавить дополнительную логику для уведомления
-            }
         } catch (e: Exception) {
             _prependState.value = FeedModelState(error = true)
         }
     }
 
     fun save() {
-        edited.value?.let {
+        edited.value?.let { post ->
             viewModelScope.launch {
                 try {
-                    repository.save(
-                        it, _photo.value?.uri?.let { MediaUpload(it.toFile()) }
+                    // Создаем новый пост с текущим временем
+                    val currentTime = Instant.now().toString()
+                    val postToSave = post.copy(
+                        published = currentTime,
+                        // Добавляем недостающие поля если нужно
+                        authorJob = post.authorJob ?: null,
+                        likeOwnerIds = post.likeOwnerIds ?: emptyList(),
+                        mentionedIds = post.mentionedIds ?: emptyList()
                     )
 
+                    repository.save(
+                        postToSave,
+                        _photo.value?.uri?.let { MediaUpload(it.toFile()) }
+                    )
                     _postCreated.value = Unit
                 } catch (e: Exception) {
                     e.printStackTrace()
+                    _dataState.value = FeedModelState(error = true)
                 }
             }
         }
@@ -148,7 +160,13 @@ class PostViewModel @Inject constructor(
     }
 
     fun likeById(id: Long) {
-        TODO()
+        viewModelScope.launch {
+            try {
+                repository.likeById(id)
+            } catch (e: Exception) {
+                _dataState.value = FeedModelState(error = true)
+            }
+        }
     }
 
     fun removeById(id: Long) {
@@ -159,5 +177,15 @@ class PostViewModel @Inject constructor(
                 _dataState.value = FeedModelState(error = true)
             }
         }
+    }
+
+    // Дополнительный метод для создания нового поста
+    fun createNewPost(content: String) {
+        val currentTime = Instant.now().toString()
+        val newPost = empty.copy(
+            content = content,
+            published = currentTime
+        )
+        edited.value = newPost
     }
 }
