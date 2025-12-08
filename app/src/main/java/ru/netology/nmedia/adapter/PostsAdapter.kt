@@ -46,8 +46,8 @@ class PostViewHolder(
             author.text = post.author
 
             // Форматируем дату для отображения
-            published.text = DateUtils.formatIsoForDisplay(post.published)
-
+                  published.text = DateUtils.formatIsoForDisplay(post.published)
+           // published.text = DateUtils.formatTimestamp(post.published)
             content.text = post.content
 
             // Загружаем аватар с использованием вашего расширения
@@ -68,7 +68,7 @@ class PostViewHolder(
 
             // Настраиваем кнопку лайка
             like.isChecked = post.likedByMe
-            like.text = post.likes.toString()
+            like.text = post.likeOwnerIds.size.toString()
 
             // Показываем/скрываем меню в зависимости от владельца
             menu.visibility = if (post.ownedByMe) View.VISIBLE else View.INVISIBLE

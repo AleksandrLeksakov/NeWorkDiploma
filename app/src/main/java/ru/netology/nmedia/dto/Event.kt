@@ -2,6 +2,7 @@ package ru.netology.nmedia.dto
 
 
 
+
 data class Event(
     val id: Long,
     val authorId: Long,

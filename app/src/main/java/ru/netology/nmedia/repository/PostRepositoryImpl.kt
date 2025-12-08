@@ -126,9 +126,16 @@ class PostRepositoryImpl @Inject constructor(
             // Сначала обновляем локально
             val post = postDao.getById(id) ?: return
             val likedByMe = !post.likedByMe
-            val likes = if (likedByMe) post.likes + 1 else post.likes - 1
 
-            postDao.updateLikeById(id, likedByMe, likes)
+            // Исправляем логику для likeOwnerIds
+            val currentUserId = 1L  // TODO: получить ID текущего пользователя из auth
+            val newLikeOwnerIds = if (likedByMe) {
+                post.likeOwnerIds + currentUserId  // Добавляем ID пользователя
+            } else {
+                post.likeOwnerIds - currentUserId  // Удаляем ID пользователя
+            }
+
+            postDao.updateLikeById(id, likedByMe, newLikeOwnerIds)
 
             // Затем на сервере
             val response = if (likedByMe) {

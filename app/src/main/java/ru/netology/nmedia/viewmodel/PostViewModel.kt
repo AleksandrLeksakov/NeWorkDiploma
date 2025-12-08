@@ -16,6 +16,7 @@ import ru.netology.nmedia.dto.Post
 import ru.netology.nmedia.model.FeedModelState
 import ru.netology.nmedia.model.PhotoModel
 import ru.netology.nmedia.repository.PostRepository
+import ru.netology.nmedia.util.DateUtils
 import ru.netology.nmedia.util.SingleLiveEvent
 import java.time.Instant
 import javax.inject.Inject
@@ -23,21 +24,20 @@ import javax.inject.Inject
 // Исправьте empty Post - published должно быть String
 private val empty = Post(
     id = 0,
-    content = "",
     authorId = 0,
     author = "",
-    authorAvatar = "",
     authorJob = null,
-    likedByMe = false,
-    likes = 0,
-    published = Instant.now().toString(),  // String в ISO формате
-    likeOwnerIds = emptyList(),
-    mentionedMe = false,
-    mentionedIds = emptyList(),
-    attachment = null,
+    authorAvatar = null,
+    content = "",
+    published = DateUtils.currentTimeIso(),  // ISO строка
+    coords = null,
     link = null,
-    ownedByMe = false,
-    coords = null
+    mentionIds = emptyList(),
+    mentionedMe = false,
+    likeOwnerIds = emptyList(),
+    likedByMe = false,
+    attachment = null,
+    ownedByMe = false
 )
 
 private val noPhoto = PhotoModel()
@@ -125,7 +125,7 @@ class PostViewModel @Inject constructor(
                         // Добавляем недостающие поля если нужно
                         authorJob = post.authorJob ?: null,
                         likeOwnerIds = post.likeOwnerIds ?: emptyList(),
-                        mentionedIds = post.mentionedIds ?: emptyList()
+                        mentionIds = post.mentionIds ?: emptyList()
                     )
 
                     repository.save(

@@ -1,9 +1,6 @@
 package ru.netology.nmedia.entity
 
-import androidx.room.ColumnInfo
-import androidx.room.Embedded
-import androidx.room.Entity
-import androidx.room.PrimaryKey
+import androidx.room.*
 import ru.netology.nmedia.dto.Post
 
 @Entity(tableName = "posts")
@@ -18,62 +15,59 @@ data class PostEntity(
     @ColumnInfo(name = "author")
     val author: String,
 
-    @ColumnInfo(name = "author_avatar")
-    val authorAvatar: String?,
-
     @ColumnInfo(name = "author_job")
     val authorJob: String?,
+
+    @ColumnInfo(name = "author_avatar")
+    val authorAvatar: String?,
 
     @ColumnInfo(name = "content")
     val content: String,
 
     @ColumnInfo(name = "published")
-    val published: String,  // Или Long
-
-    @ColumnInfo(name = "liked_by_me")
-    val likedByMe: Boolean,
-
-    @ColumnInfo(name = "likes")
-    val likes: Int,
-
-    @ColumnInfo(name = "like_owner_ids")
-    val likeOwnerIds: List<Long>,
-
-    @ColumnInfo(name = "mentioned_me")
-    val mentionedMe: Boolean,
-
-    @ColumnInfo(name = "mentioned_ids")
-    val mentionedIds: List<Long>,
+    val published: String,
 
     @Embedded
-    val attachment: AttachmentEmbeddable?,
+    val coords: CoordinatesEmbeddable?,
 
     @ColumnInfo(name = "link")
     val link: String?,
 
-    @ColumnInfo(name = "owned_by_me")
-    val ownedByMe: Boolean,
+    @ColumnInfo(name = "mention_ids")  // Оставляем как есть в базе
+    val mentionIds: List<Long>,
+
+    @ColumnInfo(name = "mentioned_me")
+    val mentionedMe: Boolean,
+
+    @ColumnInfo(name = "like_owner_ids")
+    val likeOwnerIds: List<Long>,
+
+    @ColumnInfo(name = "liked_by_me")
+    val likedByMe: Boolean,
 
     @Embedded
-    val coords: CoordinatesEmbeddable?
+    val attachment: AttachmentEmbeddable?,
+
+    @ColumnInfo(name = "owned_by_me")
+    val ownedByMe: Boolean = false
 ) {
     fun toDto() = Post(
         id = id,
         authorId = authorId,
         author = author,
-        authorAvatar = authorAvatar ?: "",
         authorJob = authorJob,
+        authorAvatar = authorAvatar,
         content = content,
         published = published,
-        likedByMe = likedByMe,
-        likes = likes,
-        likeOwnerIds = likeOwnerIds,
-        mentionedMe = mentionedMe,
-        mentionedIds = mentionedIds,
-        attachment = attachment?.toDto(),
+        coords = coords?.toDto(),
         link = link,
-        ownedByMe = ownedByMe,
-        coords = coords?.toDto()
+        mentionIds = mentionIds,  // Используем mentionIds
+        mentionedMe = mentionedMe,
+        likeOwnerIds = likeOwnerIds,
+        likedByMe = likedByMe,
+        likes = likeOwnerIds.size,
+        attachment = attachment?.toDto(),
+        ownedByMe = ownedByMe
     )
 
     companion object {
@@ -81,19 +75,18 @@ data class PostEntity(
             id = dto.id,
             authorId = dto.authorId,
             author = dto.author,
-            authorAvatar = dto.authorAvatar,
             authorJob = dto.authorJob,
+            authorAvatar = dto.authorAvatar,
             content = dto.content,
             published = dto.published,
-            likedByMe = dto.likedByMe,
-            likes = dto.likes,
-            likeOwnerIds = dto.likeOwnerIds,
-            mentionedMe = dto.mentionedMe,
-            mentionedIds = dto.mentionedIds,
-            attachment = dto.attachment?.let { AttachmentEmbeddable.fromDto(it) },
+            coords = dto.coords?.let { CoordinatesEmbeddable.fromDto(it) },
             link = dto.link,
-            ownedByMe = dto.ownedByMe,
-            coords = dto.coords?.let { CoordinatesEmbeddable.fromDto(it) }
+            mentionIds = dto.mentionIds,  // Используем mentionIds
+            mentionedMe = dto.mentionedMe,
+            likeOwnerIds = dto.likeOwnerIds,
+            likedByMe = dto.likedByMe,
+            attachment = dto.attachment?.let { AttachmentEmbeddable.fromDto(it) },
+            ownedByMe = dto.ownedByMe
         )
     }
 }

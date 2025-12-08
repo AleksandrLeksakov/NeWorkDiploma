@@ -1,28 +1,53 @@
 package ru.netology.nmedia.dto
 
-import ru.netology.nmedia.enumeration.AttachmentType
+import com.google.gson.annotations.SerializedName
 
 data class Post(
+    @SerializedName("id")
     val id: Long,
-    val authorId: Long,
-    val author: String,
-    val authorAvatar: String,
-    val authorJob: String?,
-    val content: String,
-    val published: String,
-    val likedByMe: Boolean,
-    val likes: Int = 0,
-    val likeOwnerIds: List<Long> = emptyList(),
-    val mentionedMe: Boolean = false,
-    val mentionedIds: List<Long> = emptyList(),
-    val attachment: Attachment? = null,
-    val link: String? = null,
-    val ownedByMe: Boolean = false,
-    val coords: Coordinates? = null,
-)
 
-data class Attachment(
-    val url: String,
-    val type: AttachmentType,
-    val description: String? = null
+    @SerializedName("authorId")
+    val authorId: Long,
+
+    @SerializedName("author")
+    val author: String,
+
+    @SerializedName("authorAvatar")
+    val authorAvatar: String? = null,
+
+    @SerializedName("authorJob")
+    val authorJob: String? = null,
+
+    @SerializedName("content")
+    val content: String,
+
+    @SerializedName("published")
+    val published: String,
+
+    @SerializedName("coords")
+    val coords: Coordinates? = null,
+
+    @SerializedName("link")
+    val link: String? = null,
+
+    @SerializedName("mentionIds")
+    val mentionIds: List<Long> = emptyList(),
+
+    @SerializedName("mentionedMe")
+    val mentionedMe: Boolean = false,
+
+    @SerializedName("likeOwnerIds")
+    val likeOwnerIds: List<Long> = emptyList(),
+
+    @SerializedName("likedByMe")
+    val likedByMe: Boolean,
+
+    val likes: Int = likeOwnerIds.size,
+
+    @SerializedName("attachment")
+    val attachment: Attachment? = null,
+
+    val ownedByMe: Boolean = false
+
+    // УБРАТЬ: val users: Map<Long, UserPreview> = emptyMap()
 )

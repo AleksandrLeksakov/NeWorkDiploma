@@ -28,6 +28,7 @@ interface PostDao {
     @Query("DELETE FROM posts")
     suspend fun removeAll()
 
-    @Query("UPDATE posts SET liked_by_me = :likedByMe, likes = :likes WHERE id = :id")
-    suspend fun updateLikeById(id: Long, likedByMe: Boolean, likes: Int)
+    @Query("UPDATE posts SET liked_by_me = :likedByMe, like_owner_ids = :likeOwnerIds WHERE id = :id")
+    suspend fun updateLikeById(id: Long, likedByMe: Boolean, likeOwnerIds: List<Long>)
+
 }

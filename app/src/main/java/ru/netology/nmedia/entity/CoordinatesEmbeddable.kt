@@ -1,17 +1,20 @@
 package ru.netology.nmedia.entity
 
-import androidx.room.ColumnInfo
 import ru.netology.nmedia.dto.Coordinates
+import androidx.room.ColumnInfo
+
 
 data class CoordinatesEmbeddable(
     @ColumnInfo(name = "lat")
     val lat: Double,
-    @ColumnInfo(name = "lng")
-    val lng: Double
+    @ColumnInfo(name = "long")  // "long" в базе
+    val long: Double  // long вместо lng
 ) {
-    fun toDto() = Coordinates(lat, lng)
+    fun toDto() = Coordinates(lat, long)
 
     companion object {
-        fun fromDto(dto: Coordinates) = CoordinatesEmbeddable(dto.lat, dto.lng)
+        fun fromDto(dto: Coordinates?) = dto?.let {
+            CoordinatesEmbeddable(it.lat, it.long)
+        }
     }
 }

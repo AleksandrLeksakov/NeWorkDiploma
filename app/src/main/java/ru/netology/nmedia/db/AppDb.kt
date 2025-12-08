@@ -12,7 +12,7 @@ import ru.netology.nmedia.entity.PostRemoteKeyEntity
 
 @Database(
     entities = [PostEntity::class, PostRemoteKeyEntity::class],
-    version = 2,
+    version = 3,
     exportSchema = false
 )
 @TypeConverters(Converters::class)  // Добавьте эту строку

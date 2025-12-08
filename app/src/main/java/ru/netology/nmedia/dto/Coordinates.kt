@@ -1,6 +1,10 @@
 package ru.netology.nmedia.dto
+import com.google.gson.annotations.SerializedName
 
 data class Coordinates(
+    @SerializedName("lat")
     val lat: Double,
-    val lng: Double
+
+    @SerializedName("long")
+    val long: Double  // Измените lng на long
 )
