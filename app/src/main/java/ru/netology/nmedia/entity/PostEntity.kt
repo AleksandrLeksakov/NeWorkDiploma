@@ -33,7 +33,7 @@ data class PostEntity(
     @ColumnInfo(name = "link")
     val link: String?,
 
-    @ColumnInfo(name = "mention_ids")  // Оставляем как есть в базе
+    @ColumnInfo(name = "mention_ids")
     val mentionIds: List<Long>,
 
     @ColumnInfo(name = "mentioned_me")
@@ -47,9 +47,7 @@ data class PostEntity(
 
     @Embedded
     val attachment: AttachmentEmbeddable?,
-
-    @ColumnInfo(name = "owned_by_me")
-    val ownedByMe: Boolean = false
+    // УДАЛИТЕ ownedByMe - его нет в API
 ) {
     fun toDto() = Post(
         id = id,
@@ -61,13 +59,12 @@ data class PostEntity(
         published = published,
         coords = coords?.toDto(),
         link = link,
-        mentionIds = mentionIds,  // Используем mentionIds
+        mentionIds = mentionIds,
         mentionedMe = mentionedMe,
         likeOwnerIds = likeOwnerIds,
         likedByMe = likedByMe,
-        likes = likeOwnerIds.size,
         attachment = attachment?.toDto(),
-        ownedByMe = ownedByMe
+        // ownedByMe не передаем - его нет в API
     )
 
     companion object {
@@ -81,12 +78,12 @@ data class PostEntity(
             published = dto.published,
             coords = dto.coords?.let { CoordinatesEmbeddable.fromDto(it) },
             link = dto.link,
-            mentionIds = dto.mentionIds,  // Используем mentionIds
+            mentionIds = dto.mentionIds,
             mentionedMe = dto.mentionedMe,
             likeOwnerIds = dto.likeOwnerIds,
             likedByMe = dto.likedByMe,
             attachment = dto.attachment?.let { AttachmentEmbeddable.fromDto(it) },
-            ownedByMe = dto.ownedByMe
+            // ownedByMe не приходит с API
         )
     }
 }

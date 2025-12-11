@@ -31,4 +31,6 @@ interface PostDao {
     @Query("UPDATE posts SET liked_by_me = :likedByMe, like_owner_ids = :likeOwnerIds WHERE id = :id")
     suspend fun updateLikeById(id: Long, likedByMe: Boolean, likeOwnerIds: List<Long>)
 
+    @Query("SELECT MAX(id) FROM posts") // Используем имя таблицы posts
+    suspend fun getLatestId(): Long?
 }

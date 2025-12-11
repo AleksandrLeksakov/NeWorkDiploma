@@ -48,6 +48,10 @@ data class Post(
     @SerializedName("users")
     val users: Map<Long, UserPreview> = emptyMap(),
 ) {
-    // ВЫЧИСЛЯЕМОЕ свойство на основе likeOwnerIds
+    // Вычисляемое свойство для количества лайков
     val likes: Int get() = likeOwnerIds.size
+
+    // Вычисляемое свойство для определения владельца (не из API!)
+    // Это будет вычисляться на клиенте, а не приходить с сервера
+    // Удалите ownedByMe из DTO, так как его нет в API
 }

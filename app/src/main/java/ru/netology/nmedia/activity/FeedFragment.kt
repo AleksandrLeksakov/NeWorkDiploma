@@ -5,6 +5,7 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.Lifecycle
@@ -12,6 +13,9 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
 import androidx.paging.LoadState
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.snackbar.Snackbar
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -23,11 +27,7 @@ import ru.netology.nmedia.databinding.FragmentFeedBinding
 import ru.netology.nmedia.dto.Post
 import ru.netology.nmedia.repository.PostRepository
 import ru.netology.nmedia.viewmodel.PostViewModel
-import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
-import com.google.android.material.snackbar.Snackbar
 import javax.inject.Inject
-
 
 @AndroidEntryPoint
 class FeedFragment : Fragment() {
@@ -36,6 +36,7 @@ class FeedFragment : Fragment() {
 
     @Inject
     lateinit var auth: AppAuth
+
     private val viewModel: PostViewModel by activityViewModels()
 
     override fun onCreateView(
@@ -51,7 +52,7 @@ class FeedFragment : Fragment() {
             }
 
             override fun onLike(post: Post) {
-                viewModel.likeById(post.id)
+                viewModel.likeById(post)
             }
 
             override fun onRemove(post: Post) {
@@ -69,9 +70,10 @@ class FeedFragment : Fragment() {
                     Intent.createChooser(intent, getString(R.string.chooser_share_post))
                 startActivity(shareIntent)
             }
-        })
-        binding.list.adapter = adapter
+        }, auth) // ДОБАВЬТЕ auth В АДАПТЕР
 
+        binding.list.adapter = adapter
+        binding.list.layoutManager = LinearLayoutManager(requireContext())
 
         // Загрузка данных Paging
         viewLifecycleOwner.lifecycleScope.launch {
@@ -80,26 +82,27 @@ class FeedFragment : Fragment() {
             }
         }
 
-
-        // Актуальный вариант
         // Обработка состояний загрузки Paging
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 adapter.loadStateFlow.collectLatest { state ->
+                    // Обновление состояния SwipeRefresh
                     binding.swiperefresh.isRefreshing = state.refresh is LoadState.Loading
 
+                    // Показываем/скрываем прогресс
+                    binding.progress.isVisible = state.refresh is LoadState.Loading
 
-                    // Показываем/скрываем прогресс и пустой текст
-                    binding.progress.visibility =
-                        if (state.refresh is LoadState.Loading) View.VISIBLE else View.GONE
-                    binding.emptyText.visibility =
-                        if (state.refresh is LoadState.NotLoading && adapter.itemCount == 0) View.VISIBLE else View.GONE
-
+                    // Показываем текст "пусто" если нет данных
+                    binding.emptyText.isVisible =
+                        state.refresh is LoadState.NotLoading && adapter.itemCount == 0
 
                     // Показываем ошибки загрузки
-                    val errorState = state.refresh as? LoadState.Error
-                        ?: state.append as? LoadState.Error
-                        ?: state.prepend as? LoadState.Error
+                    val errorState = when {
+                        state.refresh is LoadState.Error -> state.refresh as LoadState.Error
+                        state.append is LoadState.Error -> state.append as LoadState.Error
+                        state.prepend is LoadState.Error -> state.prepend as LoadState.Error
+                        else -> null
+                    }
 
                     errorState?.let {
                         Snackbar.make(
@@ -112,78 +115,45 @@ class FeedFragment : Fragment() {
             }
         }
 
-//обычный refresh
-        binding.swiperefresh.setOnRefreshListener(adapter::refresh)
-
-        // Кнопка для ручного обновления сверху
-        binding.refreshPrependButton.setOnClickListener {
-            viewModel.refreshPrepend()
+        // Swipe to refresh
+        binding.swiperefresh.setOnRefreshListener {
+            adapter.refresh()
         }
 
-        // Наблюдение за состоянием ручного обновления сверху
-        viewModel.prependState.observe(viewLifecycleOwner) { state ->
-            binding.refreshPrependButton.isEnabled = !state.loading
-
-            when {
-                state.loading -> {
-                    binding.refreshPrependButton//.text = "Загрузка..."
-                }
-
-                state.refreshPrependCount > 0 -> {
-                    binding.refreshPrependButton//.text = "Обновить"
-                    Snackbar.make(
-                        binding.root,
-                        "Загружено ${state.refreshPrependCount} новых постов",
-                        Snackbar.LENGTH_SHORT
-                    ).show()
-                    // Автоматически скрываем кнопку через несколько секунд
-                    binding.root.postDelayed({
-                        binding.refreshPrependButton.visibility = View.GONE
-                    }, 3000)
-                }
-
-                state.error -> {
-                    binding.refreshPrependButton//.text = "Обновить"
-                    Snackbar.make(
-                        binding.root,
-                        "Ошибка загрузки новых постов",
-                        Snackbar.LENGTH_LONG
-                    ).show()
-                }
-
-                else -> {
-                    binding.refreshPrependButton//.text = "Обновить"
-                }
+        // Кнопка FAB для создания нового поста
+        binding.fab.setOnClickListener {
+            // Проверяем авторизацию перед созданием поста
+            if (auth.authStateFlow.value?.token != null) {
+                findNavController().navigate(R.id.action_feedFragment_to_newPostFragment)
+            } else {
+                // Показать диалог с предложением войти
+                findNavController().navigate(R.id.action_feedFragment_to_loginFragment)
             }
         }
 
-        // Наблюдение за общим состоянием данных
-        viewModel.dataState.observe(viewLifecycleOwner) { state ->
-            if (state.error) {
-                Snackbar.make(binding.root, "Ошибка загрузки", Snackbar.LENGTH_LONG).show()
-            }
-        }
-        // Показываем кнопку обновления при скролле к верху
+        // Скрываем FAB при скролле вниз
         binding.list.addOnScrollListener(object : RecyclerView.OnScrollListener() {
             override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
                 super.onScrolled(recyclerView, dx, dy)
+                if (dy > 10 && binding.fab.isShown) {
+                    binding.fab.hide()
+                } else if (dy < -10 && !binding.fab.isShown) {
+                    binding.fab.show()
+                }
+
+                // Показываем кнопку обновления сверху
                 val layoutManager = recyclerView.layoutManager as LinearLayoutManager
                 val firstVisibleItemPosition = layoutManager.findFirstVisibleItemPosition()
+                binding.refreshPrependButton.isVisible = firstVisibleItemPosition == 0
+            }
 
-                // Показываем кнопку обновления, если пользователь прокрутил к самому верху
-                if (firstVisibleItemPosition == 0) {
-                    binding.refreshPrependButton.visibility = View.VISIBLE
-                } else {
-                    // скрыть кнопку, если не вверху, или оставить видимой
-                    binding.refreshPrependButton.visibility = View.GONE
+            override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
+                super.onScrollStateChanged(recyclerView, newState)
+                if (newState == RecyclerView.SCROLL_STATE_IDLE) {
+                    binding.fab.show()
                 }
             }
         })
-
-
-        binding.fab.setOnClickListener {
-            findNavController().navigate(R.id.action_feedFragment_to_newPostFragment)
-        }
 
         return binding.root
     }

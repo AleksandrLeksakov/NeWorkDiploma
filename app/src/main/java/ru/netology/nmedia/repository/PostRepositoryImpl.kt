@@ -26,9 +26,9 @@ import javax.inject.Singleton
 
 @Singleton
 class PostRepositoryImpl @Inject constructor(
-    appDb: AppDb,
+    private val appDb: AppDb,
     private val postDao: PostDao,
-    postRemoteKeyDao: PostRemoteKeyDao,
+    private val postRemoteKeyDao: PostRemoteKeyDao,
     private val apiService: ApiService,
 ) : PostRepository {
 
@@ -45,14 +45,13 @@ class PostRepositoryImpl @Inject constructor(
 
     override suspend fun getAll() {
         try {
-            val response = apiService.getAll()
+            val response = apiService.getAllPosts()
             if (!response.isSuccessful) {
                 throw ApiError(response.code(), response.message())
             }
 
             val body = response.body() ?: throw ApiError(response.code(), response.message())
 
-            // Исправляем преобразование
             val posts = body.map { post -> PostEntity.fromDto(post) }
             postDao.insert(posts)
         } catch (e: IOException) {
@@ -65,14 +64,13 @@ class PostRepositoryImpl @Inject constructor(
     override fun getNewerCount(id: Long): Flow<Int> = flow {
         while (true) {
             delay(120_000L)
-            val response = apiService.getNewer(id)
+            val response = apiService.getNewerPosts(id)
             if (!response.isSuccessful) {
                 throw ApiError(response.code(), response.message())
             }
 
             val body = response.body() ?: throw ApiError(response.code(), response.message())
 
-            // Исправляем преобразование
             val posts = body.map { post -> PostEntity.fromDto(post) }
             postDao.insert(posts)
             emit(body.size)
@@ -83,19 +81,21 @@ class PostRepositoryImpl @Inject constructor(
 
     override suspend fun save(post: Post, upload: MediaUpload?) {
         try {
-            val postWithAttachment = upload?.let {
-                upload(it)
-            }?.let { media ->
-                post.copy(attachment = Attachment(media.id, AttachmentType.IMAGE))
+            // Сначала загружаем медиа если есть
+            val postWithAttachment = upload?.let { mediaUpload ->
+                val media = upload(mediaUpload)
+                post.copy(attachment = Attachment(media.url, AttachmentType.IMAGE))
             }
-            val response = apiService.save(postWithAttachment ?: post)
+
+            // Отправляем пост на сервер
+            val postToSave = postWithAttachment ?: post
+            val response = apiService.savePost(postToSave)
             if (!response.isSuccessful) {
                 throw ApiError(response.code(), response.message())
             }
 
             val body = response.body() ?: throw ApiError(response.code(), response.message())
 
-            // Исправляем преобразование
             postDao.insert(PostEntity.fromDto(body))
         } catch (e: IOException) {
             throw NetworkError
@@ -123,34 +123,28 @@ class PostRepositoryImpl @Inject constructor(
 
     override suspend fun likeById(id: Long) {
         try {
-            // Сначала обновляем локально
-            val post = postDao.getById(id) ?: return
-            val likedByMe = !post.likedByMe
-
-            // Исправляем логику для likeOwnerIds
-            val currentUserId = 1L  // TODO: получить ID текущего пользователя из auth
-            val newLikeOwnerIds = if (likedByMe) {
-                post.likeOwnerIds + currentUserId  // Добавляем ID пользователя
-            } else {
-                post.likeOwnerIds - currentUserId  // Удаляем ID пользователя
-            }
-
-            postDao.updateLikeById(id, likedByMe, newLikeOwnerIds)
-
-            // Затем на сервере
-            val response = if (likedByMe) {
-                apiService.likeById(id)
-            } else {
-                apiService.dislikeById(id)
-            }
-
+            val response = apiService.likeById(id)
             if (!response.isSuccessful) {
                 throw ApiError(response.code(), response.message())
             }
 
             val body = response.body() ?: throw ApiError(response.code(), response.message())
+            postDao.insert(PostEntity.fromDto(body))
+        } catch (e: IOException) {
+            throw NetworkError
+        } catch (e: Exception) {
+            throw UnknownError
+        }
+    }
 
-            // Обновляем локальные данные ответом сервера
+    override suspend fun dislikeById(id: Long) {
+        try {
+            val response = apiService.dislikeById(id)
+            if (!response.isSuccessful) {
+                throw ApiError(response.code(), response.message())
+            }
+
+            val body = response.body() ?: throw ApiError(response.code(), response.message())
             postDao.insert(PostEntity.fromDto(body))
         } catch (e: IOException) {
             throw NetworkError
@@ -165,7 +159,7 @@ class PostRepositoryImpl @Inject constructor(
                 "file", upload.file.name, upload.file.asRequestBody()
             )
 
-            val response = apiService.upload(media)
+            val response = apiService.uploadMedia(media)
             if (!response.isSuccessful) {
                 throw ApiError(response.code(), response.message())
             }
@@ -180,8 +174,22 @@ class PostRepositoryImpl @Inject constructor(
 
     override suspend fun refreshPrepend(): List<Post> {
         return try {
-            val newPosts = postRemoteMediator.refreshPrepend()
-            newPosts.map { postEntity -> postEntity.toDto() }
+            // Получаем ID последнего поста
+            val latestPostId = postDao.getLatestId() ?: 0L
+
+            // Запрашиваем новые посты
+            val response = apiService.getNewerPosts(latestPostId)
+            if (!response.isSuccessful) {
+                throw ApiError(response.code(), response.message())
+            }
+
+            val body = response.body() ?: emptyList()
+
+            // Сохраняем в базу
+            val posts = body.map { post -> PostEntity.fromDto(post) }
+            postDao.insert(posts)
+
+            body
         } catch (e: Exception) {
             if (e is IOException) {
                 throw NetworkError
