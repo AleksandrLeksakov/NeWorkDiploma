@@ -2,12 +2,12 @@ package ru.netology.nmedia.dto
 
 import com.google.gson.annotations.SerializedName
 
-data class UserPreview(
+data class Token(
     @SerializedName("id")
     val id: Long,
 
-    @SerializedName("name")
-    val name: String,
+    @SerializedName("token")
+    val token: String,
 
     @SerializedName("avatar")
     val avatar: String? = null

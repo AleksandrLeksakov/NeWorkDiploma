@@ -1,7 +1,7 @@
 package ru.netology.nmedia.entity
 
 import androidx.room.*
-import ru.netology.nmedia.dto.User
+import ru.netology.nmedia.dto.UserResponse
 
 @Entity(tableName = "users")
 data class UserEntity(
@@ -21,7 +21,7 @@ data class UserEntity(
     @ColumnInfo(name = "last_seen")
     val lastSeen: String?
 ) {
-    fun toDto() = User(
+    fun toDto() = UserResponse(
         id = id,
         login = login,
         name = name,
@@ -32,7 +32,7 @@ data class UserEntity(
     )
 
     companion object {
-        fun fromDto(dto: User) = UserEntity(
+        fun fromDto(dto: UserResponse) = UserEntity(
             id = dto.id,
             login = dto.login,
             name = dto.name,

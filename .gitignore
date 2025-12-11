@@ -48,3 +48,4 @@ captures/
 
 # Secret properties file
 secret.properties
+/app/google-services.json
