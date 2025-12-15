@@ -1,8 +1,13 @@
-package ru.netology.nmedia.activity
+package ru.netology.nmedia.fragments
 
 import android.app.Activity
 import android.os.Bundle
-import android.view.*
+import android.view.LayoutInflater
+import android.view.Menu
+import android.view.MenuInflater
+import android.view.MenuItem
+import android.view.View
+import android.view.ViewGroup
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.view.MenuProvider
 import androidx.fragment.app.Fragment
@@ -49,10 +54,10 @@ class NewPostFragment : Fragment() {
         val pickPhotoLauncher =
             registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
                 when (it.resultCode) {
-                    ImagePicker.RESULT_ERROR -> {
+                    ImagePicker.Companion.RESULT_ERROR -> {
                         Snackbar.make(
                             binding.root,
-                            ImagePicker.getError(it.data),
+                            ImagePicker.Companion.getError(it.data),
                             Snackbar.LENGTH_LONG
                         ).show()
                     }
@@ -61,7 +66,7 @@ class NewPostFragment : Fragment() {
             }
 
         binding.pickPhoto.setOnClickListener {
-            ImagePicker.with(this)
+            ImagePicker.Companion.with(this)
                 .crop()
                 .compress(2048)
                 .provider(ImageProvider.GALLERY)
@@ -75,7 +80,7 @@ class NewPostFragment : Fragment() {
         }
 
         binding.takePhoto.setOnClickListener {
-            ImagePicker.with(this)
+            ImagePicker.Companion.with(this)
                 .crop()
                 .compress(2048)
                 .provider(ImageProvider.CAMERA)

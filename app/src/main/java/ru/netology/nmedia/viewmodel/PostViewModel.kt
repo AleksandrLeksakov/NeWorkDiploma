@@ -5,11 +5,11 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.paging.PagingData
-import androidx.paging.cachedIn
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import ru.netology.nmedia.auth.AppAuth
 import ru.netology.nmedia.dto.MediaUpload
@@ -21,7 +21,6 @@ import ru.netology.nmedia.util.SingleLiveEvent
 import java.io.File
 import javax.inject.Inject
 
-// Исправленный empty Post
 private val empty = Post(
     id = 0,
     authorId = 0,
@@ -30,7 +29,7 @@ private val empty = Post(
     authorAvatar = null,
     content = "",
     published = "",
-    coords = null,
+    coordinates = null,
     link = null,
     mentionIds = emptyList(),
     mentionedMe = false,
@@ -41,23 +40,18 @@ private val empty = Post(
 
 private val noPhoto = PhotoModel()
 
-@OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class PostViewModel @Inject constructor(
     private val repository: PostRepository,
     private val auth: AppAuth,
 ) : ViewModel() {
-    // Используем val data из репозитория
-    val data: Flow<PagingData<Post>> = repository.data
-        .cachedIn(viewModelScope)
 
-    private val _dataState = MutableLiveData<FeedModelState>(FeedModelState())
-    val dataState: LiveData<FeedModelState>
-        get() = _dataState
+    // Используем StateFlow для данных
+    private val _posts = MutableStateFlow<List<Post>>(emptyList())
+    val data: StateFlow<List<Post>> = _posts.asStateFlow()
 
-    private val _prependState = MutableLiveData<FeedModelState>(FeedModelState())
-    val prependState: LiveData<FeedModelState>
-        get() = _prependState
+    private val _dataState = MutableStateFlow<FeedModelState>(FeedModelState())
+    val dataState: StateFlow<FeedModelState> = _dataState.asStateFlow()
 
     private val edited = MutableLiveData(empty)
     private val _postCreated = SingleLiveEvent<Unit>()
@@ -68,10 +62,6 @@ class PostViewModel @Inject constructor(
     val photo: LiveData<PhotoModel>
         get() = _photo
 
-    // Текущий пользователь для проверки владельца поста
-    val currentUserId: Long?
-        get() = auth.authStateFlow.value?.id
-
     init {
         loadPosts()
     }
@@ -80,6 +70,11 @@ class PostViewModel @Inject constructor(
         try {
             _dataState.value = FeedModelState(loading = true)
             repository.getAll()
+
+            // Получаем посты из репозитория (временно эмулируем)
+            val posts = listOf<Post>() // TODO: Заменить на реальные данные из репозитория
+            _posts.value = posts
+
             _dataState.value = FeedModelState()
         } catch (e: Exception) {
             _dataState.value = FeedModelState(error = true)
@@ -90,21 +85,10 @@ class PostViewModel @Inject constructor(
         try {
             _dataState.value = FeedModelState(refreshing = true)
             repository.getAll()
+            // TODO: Обновить _posts.value с реальными данными
             _dataState.value = FeedModelState()
         } catch (e: Exception) {
             _dataState.value = FeedModelState(error = true)
-        }
-    }
-
-    fun refreshPrepend() = viewModelScope.launch {
-        try {
-            _prependState.value = FeedModelState(loading = true, refreshing = true)
-            val newPosts = repository.refreshPrepend()
-            _prependState.value = FeedModelState(
-                refreshPrependCount = newPosts.size
-            )
-        } catch (e: Exception) {
-            _prependState.value = FeedModelState(error = true)
         }
     }
 
@@ -112,20 +96,19 @@ class PostViewModel @Inject constructor(
         edited.value?.let { post ->
             viewModelScope.launch {
                 try {
-                    // Создаем MediaUpload из фото если есть
                     val mediaUpload = _photo.value?.uri?.let { uri ->
                         val file = File(uri.path ?: return@let null)
                         MediaUpload(file)
                     }
 
-                    // Сохраняем пост
-                    repository.save(post, mediaUpload)
-                    _postCreated.call()
+                    repository.save(post)
 
-                    // Сбрасываем состояние
                     edited.value = empty
                     _photo.value = noPhoto
+                    _postCreated.value = Unit
 
+                    // Перезагружаем посты после сохранения
+                    loadPosts()
                 } catch (e: Exception) {
                     e.printStackTrace()
                     _dataState.value = FeedModelState(error = true)
@@ -154,10 +137,11 @@ class PostViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 if (post.likedByMe) {
-                    repository.dislikeById(post.id)
+                    repository.unlikeById(post.id)
                 } else {
                     repository.likeById(post.id)
                 }
+                loadPosts()
             } catch (e: Exception) {
                 _dataState.value = FeedModelState(error = true)
             }
@@ -168,6 +152,7 @@ class PostViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 repository.removeById(id)
+                loadPosts()
             } catch (e: Exception) {
                 _dataState.value = FeedModelState(error = true)
             }
@@ -181,9 +166,5 @@ class PostViewModel @Inject constructor(
             published = currentTime
         )
         edited.value = newPost
-    }
-
-    fun isAuthenticated(): Boolean {
-        return auth.authStateFlow.value?.token != null
     }
 }

@@ -1,7 +1,6 @@
 package ru.netology.nmedia.db
 
 import android.content.Context
-import androidx.room.Room
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -11,12 +10,16 @@ import javax.inject.Singleton
 
 @InstallIn(SingletonComponent::class)
 @Module
-object DbModule {
-    @Provides
+class DbModule {
     @Singleton
+    @Provides
     fun provideDb(@ApplicationContext context: Context): AppDb {
-        return Room.databaseBuilder(context, AppDb::class.java, "app.db")
-            .fallbackToDestructiveMigration()
-            .build()
+        return AppDb.getInstance(context)
     }
+
+    @Provides
+    fun providePostDao(db: AppDb) = db.postDao()
+
+    @Provides
+    fun providePostRemoteKeyDao(db: AppDb) = db.postRemoteKeyDao()
 }

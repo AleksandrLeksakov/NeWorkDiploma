@@ -28,7 +28,7 @@ data class PostEntity(
     val published: String,
 
     @Embedded
-    val coords: CoordinatesEmbeddable?,
+    val coordinates: CoordinatesEmbeddable?,
 
     @ColumnInfo(name = "link")
     val link: String?,
@@ -47,7 +47,6 @@ data class PostEntity(
 
     @Embedded
     val attachment: AttachmentEmbeddable?,
-    // УДАЛИТЕ ownedByMe - его нет в API
 ) {
     fun toDto() = Post(
         id = id,
@@ -57,14 +56,13 @@ data class PostEntity(
         authorAvatar = authorAvatar,
         content = content,
         published = published,
-        coords = coords?.toDto(),
+        coordinates = coordinates?.toDto(),
         link = link,
         mentionIds = mentionIds,
         mentionedMe = mentionedMe,
         likeOwnerIds = likeOwnerIds,
         likedByMe = likedByMe,
         attachment = attachment?.toDto(),
-        // ownedByMe не передаем - его нет в API
     )
 
     companion object {
@@ -76,14 +74,13 @@ data class PostEntity(
             authorAvatar = dto.authorAvatar,
             content = dto.content,
             published = dto.published,
-            coords = dto.coords?.let { CoordinatesEmbeddable.fromDto(it) },
+            coordinates = dto.coordinates?.let { CoordinatesEmbeddable(it.lat, it.long) }, // ПРОСТОЕ СОЗДАНИЕ
             link = dto.link,
             mentionIds = dto.mentionIds,
             mentionedMe = dto.mentionedMe,
             likeOwnerIds = dto.likeOwnerIds,
             likedByMe = dto.likedByMe,
-            attachment = dto.attachment?.let { AttachmentEmbeddable.fromDto(it) },
-            // ownedByMe не приходит с API
+            attachment = dto.attachment?.let { AttachmentEmbeddable(it.url, it.type) }, // ПРОСТОЕ СОЗДАНИЕ
         )
     }
 }

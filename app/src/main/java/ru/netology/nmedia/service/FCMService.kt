@@ -1,45 +1,40 @@
 package ru.netology.nmedia.service
 
-import android.app.NotificationChannel
-import android.app.NotificationManager
-import android.content.Context
-import android.os.Build
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
-import com.google.gson.Gson
 import dagger.hilt.android.AndroidEntryPoint
-import ru.netology.nmedia.R
-import ru.netology.nmedia.auth.AppAuth
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import ru.netology.nmedia.api.ApiService
+import ru.netology.nmedia.dto.PushToken
 import javax.inject.Inject
 
 @AndroidEntryPoint
 class FCMService : FirebaseMessagingService() {
-    private val content = "content"
-    private val channelId = "remote"
-    private val gson = Gson()
-    @Inject
-    lateinit var auth: AppAuth
 
-    override fun onCreate() {
-        super.onCreate()
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val name = getString(R.string.channel_remote_name)
-            val descriptionText = getString(R.string.channel_remote_description)
-            val importance = NotificationManager.IMPORTANCE_DEFAULT
-            val channel = NotificationChannel(channelId, name, importance).apply {
-                description = descriptionText
+    @Inject
+    lateinit var api: ApiService
+
+    override fun onNewToken(token: String) {
+        super.onNewToken(token)
+        sendPushToken(token)
+    }
+
+    private fun sendPushToken(token: String) {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                api.sendPushToken(PushToken(token))
+            } catch (e: Exception) {
+                e.printStackTrace()
             }
-            val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            manager.createNotificationChannel(channel)
         }
     }
 
     override fun onMessageReceived(message: RemoteMessage) {
-        // TODO: replace this in homework
-        println(message.data["content"])
-    }
-
-    override fun onNewToken(token: String) {
-        auth.sendPushToken(token)
+        // Обработка push уведомлений
+        message.notification?.let {
+            // Показать уведомление
+        }
     }
 }

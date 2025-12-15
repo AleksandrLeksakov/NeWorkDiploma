@@ -4,8 +4,8 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.PopupMenu
-import androidx.paging.PagingDataAdapter
 import androidx.recyclerview.widget.DiffUtil
+import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import ru.netology.nmedia.BuildConfig
 import ru.netology.nmedia.R
@@ -17,25 +17,25 @@ import ru.netology.nmedia.extensions.getLikeText
 import ru.netology.nmedia.view.loadCircleCrop
 
 interface OnInteractionListener {
-    fun onLike(post: Post) {}
-    fun onEdit(post: Post) {}
-    fun onRemove(post: Post) {}
-    fun onShare(post: Post) {}
+    fun onLike(post: Post)
+    fun onEdit(post: Post)
+    fun onRemove(post: Post)
+    fun onShare(post: Post)
+    fun onPostClick(post: Post)
 }
 
 class PostsAdapter(
     private val onInteractionListener: OnInteractionListener,
-    private val appAuth: AppAuth // Добавляем AppAuth для проверки владельца
-) : PagingDataAdapter<Post, PostViewHolder>(PostDiffCallback()) {
+    private val appAuth: AppAuth
+) : ListAdapter<Post, PostViewHolder>(PostDiffCallback()) {
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): PostViewHolder {
         val binding = CardPostBinding.inflate(LayoutInflater.from(parent.context), parent, false)
         return PostViewHolder(binding, onInteractionListener, appAuth)
     }
 
     override fun onBindViewHolder(holder: PostViewHolder, position: Int) {
-        getItem(position)?.let {
-            holder.bind(it)
-        }
+        val post = getItem(position)
+        holder.bind(post)
     }
 }
 
@@ -48,34 +48,32 @@ class PostViewHolder(
     fun bind(post: Post) {
         binding.apply {
             author.text = post.author
-            published.text = post.formatPublishedDate()
+            published.text = formatPublishedDate(post.published)
             content.text = post.content
+
+            // Загрузка аватара
             post.authorAvatar?.let { avatarUrl ->
-                // Собираем полный URL
                 val fullUrl = if (avatarUrl.startsWith("http")) {
                     avatarUrl
                 } else {
                     "${BuildConfig.BASE_URL}/avatars/$avatarUrl"
                 }
-                // Загружаем с круговой обрезкой
                 avatar.loadCircleCrop(fullUrl)
             } ?: run {
-                // Если нет аватара, устанавливаем дефолтную иконку
                 avatar.setImageResource(R.drawable.ic_image_placeholder)
             }
 
-            // Настраиваем кнопку лайка
+            // Лайки
             like.isChecked = post.likedByMe
-            like.text = post.getLikeText() // Используем extension
+            like.text = getLikeText(post.likeOwnerIds.size, post.likedByMe)
 
             // Определяем, принадлежит ли пост текущему пользователю
-            val currentUserId = appAuth.authStateFlow.value?.id
-            val isOwnedByMe = currentUserId != null && post.authorId == currentUserId
+            val currentUserId = appAuth.authStateFlow.value.id
+            val isOwnedByMe = currentUserId != 0L && post.authorId == currentUserId
 
-            // Показываем/скрываем меню в зависимости от владельца
+            // Меню (три точки) - показываем только для своих постов
             menu.visibility = if (isOwnedByMe) View.VISIBLE else View.INVISIBLE
 
-            // Обработчик меню (три точки)
             menu.setOnClickListener {
                 PopupMenu(it.context, it).apply {
                     inflate(R.menu.options_post)
@@ -96,14 +94,18 @@ class PostViewHolder(
                 }.show()
             }
 
-            // Обработчик лайка
+            // Обработчики кликов
             like.setOnClickListener {
                 onInteractionListener.onLike(post)
             }
 
-            // Обработчик шаринга
             share.setOnClickListener {
                 onInteractionListener.onShare(post)
+            }
+
+            // Клик по всей карточке
+            root.setOnClickListener {
+                onInteractionListener.onPostClick(post)
             }
         }
     }

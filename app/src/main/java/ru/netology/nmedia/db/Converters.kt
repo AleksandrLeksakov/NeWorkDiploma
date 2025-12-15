@@ -3,6 +3,8 @@ package ru.netology.nmedia.db
 import androidx.room.TypeConverter
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import ru.netology.nmedia.entity.AttachmentEmbeddable
+import ru.netology.nmedia.entity.CoordinatesEmbeddable
 import ru.netology.nmedia.enumeration.AttachmentType
 
 class Converters {
@@ -31,5 +33,25 @@ class Converters {
     @TypeConverter
     fun toAttachmentType(value: String?): AttachmentType? {
         return value?.let { AttachmentType.valueOf(it) }
+    }
+
+    @TypeConverter
+    fun fromCoordinatesEmbeddable(value: CoordinatesEmbeddable?): String? {
+        return gson.toJson(value)
+    }
+
+    @TypeConverter
+    fun toCoordinatesEmbeddable(value: String?): CoordinatesEmbeddable? {
+        return if (value == null) null else gson.fromJson(value, CoordinatesEmbeddable::class.java)
+    }
+
+    @TypeConverter
+    fun fromAttachmentEmbeddable(value: AttachmentEmbeddable?): String? {
+        return gson.toJson(value)
+    }
+
+    @TypeConverter
+    fun toAttachmentEmbeddable(value: String?): AttachmentEmbeddable? {
+        return if (value == null) null else gson.fromJson(value, AttachmentEmbeddable::class.java)
     }
 }

@@ -1,201 +1,153 @@
 package ru.netology.nmedia.repository
 
-import androidx.paging.*
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
+import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.asRequestBody
 import ru.netology.nmedia.api.ApiService
 import ru.netology.nmedia.dao.PostDao
-import ru.netology.nmedia.dao.PostRemoteKeyDao
-import ru.netology.nmedia.db.AppDb
-import ru.netology.nmedia.dto.Attachment
 import ru.netology.nmedia.dto.Media
 import ru.netology.nmedia.dto.MediaUpload
 import ru.netology.nmedia.dto.Post
 import ru.netology.nmedia.entity.PostEntity
-import ru.netology.nmedia.enumeration.AttachmentType
-import ru.netology.nmedia.error.ApiError
-import ru.netology.nmedia.error.AppError
-import ru.netology.nmedia.error.NetworkError
-import ru.netology.nmedia.error.UnknownError
-import java.io.IOException
+import java.io.File
 import javax.inject.Inject
-import javax.inject.Singleton
 
-@Singleton
 class PostRepositoryImpl @Inject constructor(
-    private val appDb: AppDb,
-    private val postDao: PostDao,
-    private val postRemoteKeyDao: PostRemoteKeyDao,
-    private val apiService: ApiService,
+    private val dao: PostDao,
+    private val api: ApiService,
 ) : PostRepository {
 
-    private val postRemoteMediator = PostRemoteMediator(apiService, appDb, postDao, postRemoteKeyDao)
+    // Временные данные для тестирования
+    private val testPosts = listOf(
+        Post(
+            id = 1,
+            authorId = 1,
+            author = "Иван Иванов",
+            authorJob = "Android разработчик",
+            authorAvatar = "https://via.placeholder.com/150",
+            content = "Привет! Это мой первый пост в NeWork!",
+            published = "2024-01-15T10:30:00Z",
+            coordinates = null,
+            link = null,
+            mentionIds = emptyList(),
+            mentionedMe = false,
+            likeOwnerIds = listOf(2, 3),
+            likedByMe = false,
+            attachment = null
+        ),
+        Post(
+            id = 2,
+            authorId = 2,
+            author = "Мария Петрова",
+            authorJob = "Дизайнер",
+            authorAvatar = "https://via.placeholder.com/150",
+            content = "Отличная погода сегодня!",
+            published = "2024-01-14T15:45:00Z",
+            coordinates = null,
+            link = null,
+            mentionIds = listOf(1),
+            mentionedMe = true,
+            likeOwnerIds = listOf(1, 3),
+            likedByMe = true,
+            attachment = null
+        )
+    )
 
-    @OptIn(ExperimentalPagingApi::class)
-    override val data: Flow<PagingData<Post>> = Pager(
-        config = PagingConfig(pageSize = 25),
-        remoteMediator = postRemoteMediator,
-        pagingSourceFactory = postDao::pagingSource,
-    ).flow.map { pagingData ->
-        pagingData.map { postEntity -> postEntity.toDto() }
+    override val data: Flow<List<Post>> = flow {
+        emit(testPosts) // Временно возвращаем тестовые данные
     }
 
     override suspend fun getAll() {
         try {
-            val response = apiService.getAllPosts()
-            if (!response.isSuccessful) {
-                throw ApiError(response.code(), response.message())
+            val response = api.getAll()
+            if (response.isSuccessful) {
+                val body = response.body()
+                if (body != null) {
+                    dao.insert(body.map { PostEntity.fromDto(it) })
+                }
             }
-
-            val body = response.body() ?: throw ApiError(response.code(), response.message())
-
-            val posts = body.map { post -> PostEntity.fromDto(post) }
-            postDao.insert(posts)
-        } catch (e: IOException) {
-            throw NetworkError
         } catch (e: Exception) {
-            throw UnknownError
-        }
-    }
-
-    override fun getNewerCount(id: Long): Flow<Int> = flow {
-        while (true) {
-            delay(120_000L)
-            val response = apiService.getNewerPosts(id)
-            if (!response.isSuccessful) {
-                throw ApiError(response.code(), response.message())
-            }
-
-            val body = response.body() ?: throw ApiError(response.code(), response.message())
-
-            val posts = body.map { post -> PostEntity.fromDto(post) }
-            postDao.insert(posts)
-            emit(body.size)
-        }
-    }
-        .catch { e -> throw AppError.from(e) }
-        .flowOn(Dispatchers.Default)
-
-    override suspend fun save(post: Post, upload: MediaUpload?) {
-        try {
-            // Сначала загружаем медиа если есть
-            val postWithAttachment = upload?.let { mediaUpload ->
-                val media = upload(mediaUpload)
-                post.copy(attachment = Attachment(media.url, AttachmentType.IMAGE))
-            }
-
-            // Отправляем пост на сервер
-            val postToSave = postWithAttachment ?: post
-            val response = apiService.savePost(postToSave)
-            if (!response.isSuccessful) {
-                throw ApiError(response.code(), response.message())
-            }
-
-            val body = response.body() ?: throw ApiError(response.code(), response.message())
-
-            postDao.insert(PostEntity.fromDto(body))
-        } catch (e: IOException) {
-            throw NetworkError
-        } catch (e: Exception) {
-            throw UnknownError
-        }
-    }
-
-    override suspend fun removeById(id: Long) {
-        try {
-            // Сначала удаляем локально
-            postDao.removeById(id)
-
-            // Затем на сервере
-            val response = apiService.removeById(id)
-            if (!response.isSuccessful) {
-                throw ApiError(response.code(), response.message())
-            }
-        } catch (e: IOException) {
-            throw NetworkError
-        } catch (e: Exception) {
-            throw UnknownError
+            e.printStackTrace()
         }
     }
 
     override suspend fun likeById(id: Long) {
         try {
-            val response = apiService.likeById(id)
-            if (!response.isSuccessful) {
-                throw ApiError(response.code(), response.message())
+            val response = api.likeById(id)
+            if (response.isSuccessful) {
+                val body = response.body()
+                if (body != null) {
+                    dao.insert(PostEntity.fromDto(body))
+                }
             }
-
-            val body = response.body() ?: throw ApiError(response.code(), response.message())
-            postDao.insert(PostEntity.fromDto(body))
-        } catch (e: IOException) {
-            throw NetworkError
         } catch (e: Exception) {
-            throw UnknownError
+            e.printStackTrace()
         }
     }
 
-    override suspend fun dislikeById(id: Long) {
+    override suspend fun unlikeById(id: Long) {
         try {
-            val response = apiService.dislikeById(id)
-            if (!response.isSuccessful) {
-                throw ApiError(response.code(), response.message())
+            val response = api.unlikeById(id)
+            if (response.isSuccessful) {
+                val body = response.body()
+                if (body != null) {
+                    dao.insert(PostEntity.fromDto(body))
+                }
             }
-
-            val body = response.body() ?: throw ApiError(response.code(), response.message())
-            postDao.insert(PostEntity.fromDto(body))
-        } catch (e: IOException) {
-            throw NetworkError
         } catch (e: Exception) {
-            throw UnknownError
+            e.printStackTrace()
+        }
+    }
+
+    override suspend fun removeById(id: Long) {
+        try {
+            val response = api.removeById(id)
+            if (response.isSuccessful) {
+                dao.removeById(id)
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    override suspend fun save(post: Post) {
+        try {
+            val response = api.save(post)
+            if (response.isSuccessful) {
+                val body = response.body()
+                if (body != null) {
+                    dao.insert(PostEntity.fromDto(body))
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
     }
 
     override suspend fun upload(upload: MediaUpload): Media {
         try {
-            val media = MultipartBody.Part.createFormData(
-                "file", upload.file.name, upload.file.asRequestBody()
+            val file = upload.file
+            val requestFile = file.asRequestBody("image/*".toMediaType())
+            val body = MultipartBody.Part.createFormData(
+                "file",
+                file.name,
+                requestFile
             )
 
-            val response = apiService.uploadMedia(media)
-            if (!response.isSuccessful) {
-                throw ApiError(response.code(), response.message())
+            val response = api.upload(body)
+            if (response.isSuccessful) {
+                return response.body() ?: throw RuntimeException("Media body is null")
+            } else {
+                throw RuntimeException("Upload failed: ${response.message()}")
             }
-
-            return response.body() ?: throw ApiError(response.code(), response.message())
-        } catch (e: IOException) {
-            throw NetworkError
         } catch (e: Exception) {
-            throw UnknownError
+            throw e
         }
     }
 
-    override suspend fun refreshPrepend(): List<Post> {
-        return try {
-            // Получаем ID последнего поста
-            val latestPostId = postDao.getLatestId() ?: 0L
-
-            // Запрашиваем новые посты
-            val response = apiService.getNewerPosts(latestPostId)
-            if (!response.isSuccessful) {
-                throw ApiError(response.code(), response.message())
-            }
-
-            val body = response.body() ?: emptyList()
-
-            // Сохраняем в базу
-            val posts = body.map { post -> PostEntity.fromDto(post) }
-            postDao.insert(posts)
-
-            body
-        } catch (e: Exception) {
-            if (e is IOException) {
-                throw NetworkError
-            } else {
-                throw UnknownError
-            }
-        }
+    override fun getNewerCount(id: Long): Flow<Int> = flow {
+        emit(0)
     }
 }

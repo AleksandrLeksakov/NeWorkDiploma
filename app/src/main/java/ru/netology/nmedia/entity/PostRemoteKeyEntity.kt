@@ -1,25 +1,16 @@
 package ru.netology.nmedia.entity
 
-import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
-@Entity(
-    tableName = "posts_remote_keys",
-    primaryKeys = ["type", "id"]
-)
+@Entity
 data class PostRemoteKeyEntity(
-    @ColumnInfo(name = "type")
-    val type: KeyType,
-    @ColumnInfo(name = "id")
-    val id: Long
+    @PrimaryKey
+    val id: Long,
+    val nextKey: Long?,
+    val type: Type = Type.POST
 ) {
-    enum class KeyType {
-        AFTER, BEFORE
-    }
-
-    companion object {
-        const val TYPE_AFTER = "AFTER"
-        const val TYPE_BEFORE = "BEFORE"
+    enum class Type {
+        POST, EVENT
     }
 }

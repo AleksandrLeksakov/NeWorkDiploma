@@ -3,8 +3,8 @@ import com.google.gson.annotations.SerializedName
 
 data class Coordinates(
     @SerializedName("lat")
-    val lat: Double,
+    val lat: String,
 
     @SerializedName("long")
-    val long: Double  // Измените lng на long
+    val long: String
 )

@@ -24,8 +24,8 @@ data class Post(
     @SerializedName("published")
     val published: String,
 
-    @SerializedName("coords")
-    val coords: Coordinates? = null,
+    @SerializedName("coordinates")
+    val coordinates: Coordinates? = null,
 
     @SerializedName("link")
     val link: String? = null,

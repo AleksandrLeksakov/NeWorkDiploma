@@ -30,4 +30,11 @@
     <string name="sign_out">Sign Out</string>
     <string name="refresh_posts">refresh_posts</string>
     <string name="loading_posts">loading_posts</string>
+    <string name="select_avatar" translatable="false">Выбрать аватар</string>
+    <string name="confirm_password" translatable="false">Подтвердите пароль</string>
+    <string name="register" translatable="false">Зарегистрироваться</string>
+    <string name="login" translatable="false">Логин</string>
+    <string name="name" translatable="false">Имя</string>
+    <string name="password" translatable="false">Пароль</string>
+    <string name="avatar" translatable="false">Аватар</string>
 </resources>

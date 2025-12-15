@@ -1,4 +1,4 @@
-package ru.netology.nmedia.activity
+package ru.netology.nmedia.fragments
 
 import android.content.Intent
 import android.os.Bundle
@@ -12,7 +12,6 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
-import androidx.paging.LoadState
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.snackbar.Snackbar
@@ -25,30 +24,45 @@ import ru.netology.nmedia.adapter.PostsAdapter
 import ru.netology.nmedia.auth.AppAuth
 import ru.netology.nmedia.databinding.FragmentFeedBinding
 import ru.netology.nmedia.dto.Post
-import ru.netology.nmedia.repository.PostRepository
 import ru.netology.nmedia.viewmodel.PostViewModel
 import javax.inject.Inject
 
 @AndroidEntryPoint
 class FeedFragment : Fragment() {
-    @Inject
-    lateinit var repository: PostRepository
 
     @Inject
     lateinit var auth: AppAuth
 
     private val viewModel: PostViewModel by activityViewModels()
+    private lateinit var binding: FragmentFeedBinding
+    private lateinit var adapter: PostsAdapter
 
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
-        val binding = FragmentFeedBinding.inflate(inflater, container, false)
+        binding = FragmentFeedBinding.inflate(inflater, container, false)
+        return binding.root
+    }
 
-        val adapter = PostsAdapter(object : OnInteractionListener {
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+
+        setupAdapter()
+        setupRecyclerView()
+        setupObservers()
+        setupListeners()
+
+        // Загружаем посты при создании
+        viewModel.loadPosts()
+    }
+
+    private fun setupAdapter() {
+        adapter = PostsAdapter(object : OnInteractionListener {
             override fun onEdit(post: Post) {
                 viewModel.edit(post)
+                findNavController().navigate(R.id.action_feedFragment_to_newPostFragment)
             }
 
             override fun onLike(post: Post) {
@@ -66,67 +80,73 @@ class FeedFragment : Fragment() {
                     type = "text/plain"
                 }
 
-                val shareIntent =
-                    Intent.createChooser(intent, getString(R.string.chooser_share_post))
+                val shareIntent = Intent.createChooser(intent, getString(R.string.chooser_share_post))
                 startActivity(shareIntent)
             }
-        }, auth) // ДОБАВЬТЕ auth В АДАПТЕР
 
+            override fun onPostClick(post: Post) {
+                // TODO: Переход к деталям поста
+                // findNavController().navigate(R.id.action_feedFragment_to_postDetailFragment)
+                // Временно покажем сообщение
+                Snackbar.make(binding.root, "Клик по посту ${post.id}", Snackbar.LENGTH_SHORT).show()
+            }
+        }, auth)
+    }
+
+    private fun setupRecyclerView() {
         binding.list.adapter = adapter
         binding.list.layoutManager = LinearLayoutManager(requireContext())
+    }
 
-        // Загрузка данных Paging
+    private fun setupObservers() {
+        // Подписываемся на данные из ViewModel
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                viewModel.data.collectLatest(adapter::submitData)
+                viewModel.data.collectLatest { posts ->
+                    adapter.submitList(posts) // ИСПРАВЛЕНО: submitList вместо submitData
+
+                    // Обновляем UI в зависимости от наличия данных
+                    binding.emptyText.isVisible = posts.isEmpty()
+                }
             }
         }
 
-        // Обработка состояний загрузки Paging
+        // Подписываемся на состояние загрузки
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                adapter.loadStateFlow.collectLatest { state ->
-                    // Обновление состояния SwipeRefresh
-                    binding.swiperefresh.isRefreshing = state.refresh is LoadState.Loading
+                viewModel.dataState.collectLatest { state ->
+                    binding.progress.isVisible = state.loading
+                    binding.swiperefresh.isRefreshing = state.refreshing
 
-                    // Показываем/скрываем прогресс
-                    binding.progress.isVisible = state.refresh is LoadState.Loading
-
-                    // Показываем текст "пусто" если нет данных
-                    binding.emptyText.isVisible =
-                        state.refresh is LoadState.NotLoading && adapter.itemCount == 0
-
-                    // Показываем ошибки загрузки
-                    val errorState = when {
-                        state.refresh is LoadState.Error -> state.refresh as LoadState.Error
-                        state.append is LoadState.Error -> state.append as LoadState.Error
-                        state.prepend is LoadState.Error -> state.prepend as LoadState.Error
-                        else -> null
-                    }
-
-                    errorState?.let {
+                    if (state.error) {
                         Snackbar.make(
                             binding.root,
-                            "Ошибка загрузки: ${it.error.message}",
+                            "Ошибка загрузки данных",
                             Snackbar.LENGTH_LONG
                         ).show()
                     }
                 }
             }
         }
+    }
 
+    private fun setupListeners() {
         // Swipe to refresh
         binding.swiperefresh.setOnRefreshListener {
-            adapter.refresh()
+            viewModel.refreshPosts()
+        }
+
+        // Кнопка обновления сверху
+        binding.refreshPrependButton.setOnClickListener {
+            viewModel.refreshPosts()
         }
 
         // Кнопка FAB для создания нового поста
         binding.fab.setOnClickListener {
-            // Проверяем авторизацию перед созданием поста
-            if (auth.authStateFlow.value?.token != null) {
+            if (auth.authStateFlow.value.token != null) {
+                viewModel.createNewPost("")
                 findNavController().navigate(R.id.action_feedFragment_to_newPostFragment)
             } else {
-                // Показать диалог с предложением войти
                 findNavController().navigate(R.id.action_feedFragment_to_loginFragment)
             }
         }
@@ -141,7 +161,6 @@ class FeedFragment : Fragment() {
                     binding.fab.show()
                 }
 
-                // Показываем кнопку обновления сверху
                 val layoutManager = recyclerView.layoutManager as LinearLayoutManager
                 val firstVisibleItemPosition = layoutManager.findFirstVisibleItemPosition()
                 binding.refreshPrependButton.isVisible = firstVisibleItemPosition == 0
@@ -154,7 +173,5 @@ class FeedFragment : Fragment() {
                 }
             }
         })
-
-        return binding.root
     }
 }
