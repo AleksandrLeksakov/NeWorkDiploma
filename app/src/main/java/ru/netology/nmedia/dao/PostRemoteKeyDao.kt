@@ -12,7 +12,7 @@ interface PostRemoteKeyDao {
     suspend fun insert(key: PostRemoteKeyEntity)
 
     @Query("SELECT * FROM PostRemoteKeyEntity WHERE id = :id")
-    suspend fun getKeyById(id: Long): PostRemoteKeyEntity?
+    suspend fun keyById(id: Long): PostRemoteKeyEntity?
 
     @Query("DELETE FROM PostRemoteKeyEntity")
     suspend fun clear()

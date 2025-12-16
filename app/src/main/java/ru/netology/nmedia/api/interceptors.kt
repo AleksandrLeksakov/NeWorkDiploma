@@ -10,37 +10,23 @@ import ru.netology.nmedia.auth.AppAuth
 fun loggingInterceptor() = HttpLoggingInterceptor()
     .apply {
         if (BuildConfig.DEBUG) {
-            level = HttpLoggingInterceptor.Level.HEADERS  // Показываем заголовки
+            level = HttpLoggingInterceptor.Level.HEADERS
         }
     }
 
-fun authInterceptor(auth: AppAuth) = fun(chain: Interceptor.Chain): Response {
-    val token = auth.authStateFlow.value.token
-    Log.d("INTERCEPTOR", "Auth token: ${token ?: "null"}")
-
-    token?.let {
-        val newRequest = chain.request().newBuilder()
-            .addHeader("Authorization", "Bearer $it")
-            .build()
-        return chain.proceed(newRequest)
-    }
-
+// ВРЕМЕННО УПРОЩАЕМ - без зависимости от AppAuth
+fun authInterceptor() = fun(chain: Interceptor.Chain): Response {
+    // Временно пустой - добавим токен позже
     return chain.proceed(chain.request())
 }
 
 fun apiKeyInterceptor() = fun(chain: Interceptor.Chain): Response {
-    // Проверяем API_KEY
     val apiKey = BuildConfig.API_KEY.trim()
     Log.d("INTERCEPTOR", "🔑 API_KEY raw: '$apiKey'")
     Log.d("INTERCEPTOR", "🔑 API_KEY length: ${apiKey.length}")
 
-    // Проверяем что ключ не пустой
     if (apiKey.isBlank() || apiKey == "\"\"" || apiKey == "''") {
         Log.e("INTERCEPTOR", "❌ ERROR: API_KEY is empty!")
-        Log.e("INTERCEPTOR", "Check secret.properties file in project root")
-        Log.e("INTERCEPTOR", "It should contain: API_KEY=your_key_here")
-    } else if (apiKey.length < 10) {
-        Log.w("INTERCEPTOR", "⚠️ WARNING: API_KEY seems too short: $apiKey")
     }
 
     val request = chain.request()
@@ -50,11 +36,10 @@ fun apiKeyInterceptor() = fun(chain: Interceptor.Chain): Response {
         .addHeader("Api-Key", apiKey)
         .build()
 
-    // Логируем все заголовки - ИСПРАВЛЕННЫЙ СИНТАКСИС
     Log.d("INTERCEPTOR", "📋 Request headers:")
-    newRequest.headers.forEach { (name, value) ->  // Используем деструктуризацию
+    newRequest.headers.forEach { (name, value) ->
         if (name.equals("Api-Key", ignoreCase = true)) {
-            Log.d("INTERCEPTOR", "  $name: ****${value.takeLast(4)}") // Маскируем ключ
+            Log.d("INTERCEPTOR", "  $name: ****${value.takeLast(4)}")
         } else {
             Log.d("INTERCEPTOR", "  $name: $value")
         }

@@ -12,6 +12,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
+import androidx.paging.LoadState
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.snackbar.Snackbar
@@ -53,9 +54,6 @@ class FeedFragment : Fragment() {
         setupRecyclerView()
         setupObservers()
         setupListeners()
-
-        // Загружаем посты при создании
-        viewModel.loadPosts()
     }
 
     private fun setupAdapter() {
@@ -86,8 +84,6 @@ class FeedFragment : Fragment() {
 
             override fun onPostClick(post: Post) {
                 // TODO: Переход к деталям поста
-                // findNavController().navigate(R.id.action_feedFragment_to_postDetailFragment)
-                // Временно покажем сообщение
                 Snackbar.make(binding.root, "Клик по посту ${post.id}", Snackbar.LENGTH_SHORT).show()
             }
         }, auth)
@@ -99,29 +95,41 @@ class FeedFragment : Fragment() {
     }
 
     private fun setupObservers() {
-        // Подписываемся на данные из ViewModel
+        // Подписываемся на PagingData
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                viewModel.data.collectLatest { posts ->
-                    adapter.submitList(posts) // ИСПРАВЛЕНО: submitList вместо submitData
-
-                    // Обновляем UI в зависимости от наличия данных
-                    binding.emptyText.isVisible = posts.isEmpty()
+                viewModel.data.collectLatest { pagingData ->
+                    adapter.submitData(pagingData)
                 }
             }
         }
 
-        // Подписываемся на состояние загрузки
+        // Обработка состояний загрузки Paging
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                viewModel.dataState.collectLatest { state ->
-                    binding.progress.isVisible = state.loading
-                    binding.swiperefresh.isRefreshing = state.refreshing
+                adapter.loadStateFlow.collectLatest { loadState ->
+                    // Обновление состояния SwipeRefresh
+                    binding.swiperefresh.isRefreshing = loadState.refresh is LoadState.Loading
 
-                    if (state.error) {
+                    // Показываем/скрываем прогресс
+                    binding.progress.isVisible = loadState.refresh is LoadState.Loading
+
+                    // Показываем текст "пусто" если нет данных
+                    binding.emptyText.isVisible = loadState.refresh is LoadState.NotLoading &&
+                            adapter.itemCount == 0
+
+                    // Показываем ошибки загрузки
+                    val errorState = when {
+                        loadState.refresh is LoadState.Error -> loadState.refresh as LoadState.Error
+                        loadState.append is LoadState.Error -> loadState.append as LoadState.Error
+                        loadState.prepend is LoadState.Error -> loadState.prepend as LoadState.Error
+                        else -> null
+                    }
+
+                    errorState?.let {
                         Snackbar.make(
                             binding.root,
-                            "Ошибка загрузки данных",
+                            "Ошибка загрузки: ${it.error.message}",
                             Snackbar.LENGTH_LONG
                         ).show()
                     }
@@ -133,12 +141,12 @@ class FeedFragment : Fragment() {
     private fun setupListeners() {
         // Swipe to refresh
         binding.swiperefresh.setOnRefreshListener {
-            viewModel.refreshPosts()
+            adapter.refresh()
         }
 
         // Кнопка обновления сверху
         binding.refreshPrependButton.setOnClickListener {
-            viewModel.refreshPosts()
+            adapter.refresh()
         }
 
         // Кнопка FAB для создания нового поста

@@ -5,15 +5,16 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.paging.PagingData
+import androidx.paging.cachedIn
+import androidx.paging.map
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
-import ru.netology.nmedia.auth.AppAuth
 import ru.netology.nmedia.dto.MediaUpload
 import ru.netology.nmedia.dto.Post
+import ru.netology.nmedia.entity.PostEntity
 import ru.netology.nmedia.model.FeedModelState
 import ru.netology.nmedia.model.PhotoModel
 import ru.netology.nmedia.repository.PostRepository
@@ -43,15 +44,37 @@ private val noPhoto = PhotoModel()
 @HiltViewModel
 class PostViewModel @Inject constructor(
     private val repository: PostRepository,
-    private val auth: AppAuth,
 ) : ViewModel() {
 
-    // Используем StateFlow для данных
-    private val _posts = MutableStateFlow<List<Post>>(emptyList())
-    val data: StateFlow<List<Post>> = _posts.asStateFlow()
+    // ВАРИАНТ 1: С явным указанием типов
+    val data: Flow<PagingData<Post>> = repository.data
+        .map { pagingData: PagingData<PostEntity> ->
+            pagingData.map { postEntity: PostEntity ->
+                postEntity.toDto()
+            }
+        }
+        .cachedIn(viewModelScope)
 
-    private val _dataState = MutableStateFlow<FeedModelState>(FeedModelState())
-    val dataState: StateFlow<FeedModelState> = _dataState.asStateFlow()
+    // ВАРИАНТ 2: Альтернативный (если вариант 1 не работает)
+    /*
+    val data: Flow<PagingData<Post>> = repository.data
+        .map { pagingData ->
+            pagingData.map { postEntity ->
+                postEntity.toDto()
+            }
+        }
+        .cachedIn(viewModelScope)
+    */
+
+    // ВАРИАНТ 3: Самый простой - без map преобразования
+    /*
+    val data: Flow<PagingData<PostEntity>> = repository.data
+        .cachedIn(viewModelScope)
+    */
+
+    private val _dataState = MutableLiveData<FeedModelState>(FeedModelState())
+    val dataState: LiveData<FeedModelState>
+        get() = _dataState
 
     private val edited = MutableLiveData(empty)
     private val _postCreated = SingleLiveEvent<Unit>()
@@ -62,19 +85,10 @@ class PostViewModel @Inject constructor(
     val photo: LiveData<PhotoModel>
         get() = _photo
 
-    init {
-        loadPosts()
-    }
-
     fun loadPosts() = viewModelScope.launch {
         try {
             _dataState.value = FeedModelState(loading = true)
             repository.getAll()
-
-            // Получаем посты из репозитория (временно эмулируем)
-            val posts = listOf<Post>() // TODO: Заменить на реальные данные из репозитория
-            _posts.value = posts
-
             _dataState.value = FeedModelState()
         } catch (e: Exception) {
             _dataState.value = FeedModelState(error = true)
@@ -84,8 +98,7 @@ class PostViewModel @Inject constructor(
     fun refreshPosts() = viewModelScope.launch {
         try {
             _dataState.value = FeedModelState(refreshing = true)
-            repository.getAll()
-            // TODO: Обновить _posts.value с реальными данными
+            // Для обновления Paging можно пересоздать Pager или сбросить состояние
             _dataState.value = FeedModelState()
         } catch (e: Exception) {
             _dataState.value = FeedModelState(error = true)
@@ -107,8 +120,6 @@ class PostViewModel @Inject constructor(
                     _photo.value = noPhoto
                     _postCreated.value = Unit
 
-                    // Перезагружаем посты после сохранения
-                    loadPosts()
                 } catch (e: Exception) {
                     e.printStackTrace()
                     _dataState.value = FeedModelState(error = true)
@@ -141,7 +152,6 @@ class PostViewModel @Inject constructor(
                 } else {
                     repository.likeById(post.id)
                 }
-                loadPosts()
             } catch (e: Exception) {
                 _dataState.value = FeedModelState(error = true)
             }
@@ -152,7 +162,6 @@ class PostViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 repository.removeById(id)
-                loadPosts()
             } catch (e: Exception) {
                 _dataState.value = FeedModelState(error = true)
             }

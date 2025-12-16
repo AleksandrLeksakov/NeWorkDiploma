@@ -14,7 +14,7 @@ interface PostDao {
     fun getAll(): Flow<List<PostEntity>>
 
     @Query("SELECT COUNT(*) FROM posts WHERE id > :id")
-    suspend fun getNewerCount(id: Long): Int?
+    suspend fun getNewerCount(id: Long): Int
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(post: PostEntity)

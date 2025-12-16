@@ -12,10 +12,10 @@ import ru.netology.nmedia.entity.PostRemoteKeyEntity
 
 @Database(
     entities = [PostEntity::class, PostRemoteKeyEntity::class],
-    version = 3,
+    version = 1,
     exportSchema = false
 )
-@TypeConverters(Converters::class)  // Добавьте эту строку
+@TypeConverters(Converters::class)
 abstract class AppDb : RoomDatabase() {
     abstract fun postDao(): PostDao
     abstract fun postRemoteKeyDao(): PostRemoteKeyDao
@@ -32,7 +32,7 @@ abstract class AppDb : RoomDatabase() {
 
         private fun buildDatabase(context: Context) =
             Room.databaseBuilder(context, AppDb::class.java, "app.db")
-                .fallbackToDestructiveMigration()
+                .fallbackToDestructiveMigrationOnDowngrade()  // ИСПРАВЛЕНО!
                 .build()
     }
 }

@@ -10,16 +10,14 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
-import ru.netology.nmedia.api.ApiService
 import ru.netology.nmedia.dto.AuthState
-import ru.netology.nmedia.dto.PushToken
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
 class AppAuth @Inject constructor(
-    @ApplicationContext private val context: Context,
-    private val api: ApiService
+    @ApplicationContext private val context: Context
+    // УБИРАЕМ ВСЕ сетевые зависимости!
 ) {
     private val prefs = context.getSharedPreferences("auth", Context.MODE_PRIVATE)
     private val scope = CoroutineScope(Dispatchers.Default)
@@ -44,7 +42,8 @@ class AppAuth @Inject constructor(
             putLong(ID_KEY, id)
             apply()
         }
-        sendPushToken()
+        // Временно отключаем отправку push токена
+        // sendPushToken()
     }
 
     @Synchronized
@@ -57,16 +56,17 @@ class AppAuth @Inject constructor(
         }
     }
 
-    fun sendPushToken() {
-        scope.launch {
-            try {
-                val pushToken = FirebaseMessaging.getInstance().token.await()
-                api.sendPushToken(PushToken(pushToken))
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-        }
-    }
+    // Временно отключаем - добавим позже
+    // private fun sendPushToken() {
+    //     scope.launch {
+    //         try {
+    //             val pushToken = FirebaseMessaging.getInstance().token.await()
+    //             // Будем отправлять позже
+    //         } catch (e: Exception) {
+    //             e.printStackTrace()
+    //         }
+    //     }
+    // }
 
     companion object {
         private const val TOKEN_KEY = "token"

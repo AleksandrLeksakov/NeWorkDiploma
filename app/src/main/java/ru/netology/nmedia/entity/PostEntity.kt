@@ -2,6 +2,8 @@ package ru.netology.nmedia.entity
 
 import androidx.room.*
 import ru.netology.nmedia.dto.Post
+import ru.netology.nmedia.dto.Coordinates
+import ru.netology.nmedia.dto.Attachment
 
 @Entity(tableName = "posts")
 data class PostEntity(
@@ -48,39 +50,51 @@ data class PostEntity(
     @Embedded
     val attachment: AttachmentEmbeddable?,
 ) {
-    fun toDto() = Post(
-        id = id,
-        authorId = authorId,
-        author = author,
-        authorJob = authorJob,
-        authorAvatar = authorAvatar,
-        content = content,
-        published = published,
-        coordinates = coordinates?.toDto(),
-        link = link,
-        mentionIds = mentionIds,
-        mentionedMe = mentionedMe,
-        likeOwnerIds = likeOwnerIds,
-        likedByMe = likedByMe,
-        attachment = attachment?.toDto(),
-    )
+    fun toDto(): Post {
+        return Post(
+            id = id,
+            authorId = authorId,
+            author = author,
+            authorJob = authorJob,
+            authorAvatar = authorAvatar,
+            content = content,
+            published = published,
+            coordinates = coordinates?.let {
+                Coordinates(it.lat, it.long)
+            },
+            link = link,
+            mentionIds = mentionIds,
+            mentionedMe = mentionedMe,
+            likeOwnerIds = likeOwnerIds,
+            likedByMe = likedByMe,
+            attachment = attachment?.let {
+                Attachment(it.url, it.type)
+            }
+        )
+    }
 
     companion object {
-        fun fromDto(dto: Post) = PostEntity(
-            id = dto.id,
-            authorId = dto.authorId,
-            author = dto.author,
-            authorJob = dto.authorJob,
-            authorAvatar = dto.authorAvatar,
-            content = dto.content,
-            published = dto.published,
-            coordinates = dto.coordinates?.let { CoordinatesEmbeddable(it.lat, it.long) }, // ПРОСТОЕ СОЗДАНИЕ
-            link = dto.link,
-            mentionIds = dto.mentionIds,
-            mentionedMe = dto.mentionedMe,
-            likeOwnerIds = dto.likeOwnerIds,
-            likedByMe = dto.likedByMe,
-            attachment = dto.attachment?.let { AttachmentEmbeddable(it.url, it.type) }, // ПРОСТОЕ СОЗДАНИЕ
-        )
+        fun fromDto(dto: Post): PostEntity {
+            return PostEntity(
+                id = dto.id,
+                authorId = dto.authorId,
+                author = dto.author,
+                authorJob = dto.authorJob,
+                authorAvatar = dto.authorAvatar,
+                content = dto.content,
+                published = dto.published,
+                coordinates = dto.coordinates?.let {
+                    CoordinatesEmbeddable(it.lat, it.long)
+                },
+                link = dto.link,
+                mentionIds = dto.mentionIds,
+                mentionedMe = dto.mentionedMe,
+                likeOwnerIds = dto.likeOwnerIds,
+                likedByMe = dto.likedByMe,
+                attachment = dto.attachment?.let {
+                    AttachmentEmbeddable(it.url, it.type)
+                }
+            )
+        }
     }
 }

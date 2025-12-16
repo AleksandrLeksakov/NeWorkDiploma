@@ -1,12 +1,13 @@
 package ru.netology.nmedia.repository
 
+import androidx.paging.*
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flow
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.asRequestBody
 import ru.netology.nmedia.api.ApiService
 import ru.netology.nmedia.dao.PostDao
+import ru.netology.nmedia.db.AppDb
 import ru.netology.nmedia.dto.Media
 import ru.netology.nmedia.dto.MediaUpload
 import ru.netology.nmedia.dto.Post
@@ -17,55 +18,54 @@ import javax.inject.Inject
 class PostRepositoryImpl @Inject constructor(
     private val dao: PostDao,
     private val api: ApiService,
+    private val db: AppDb
 ) : PostRepository {
 
-    // Временные данные для тестирования
-    private val testPosts = listOf(
-        Post(
-            id = 1,
-            authorId = 1,
-            author = "Иван Иванов",
-            authorJob = "Android разработчик",
-            authorAvatar = "https://via.placeholder.com/150",
-            content = "Привет! Это мой первый пост в NeWork!",
-            published = "2024-01-15T10:30:00Z",
-            coordinates = null,
-            link = null,
-            mentionIds = emptyList(),
-            mentionedMe = false,
-            likeOwnerIds = listOf(2, 3),
-            likedByMe = false,
-            attachment = null
+    @OptIn(ExperimentalPagingApi::class)
+    override val data: Flow<PagingData<PostEntity>> = Pager(
+        config = PagingConfig(
+            pageSize = 10,
+            enablePlaceholders = false
         ),
-        Post(
-            id = 2,
-            authorId = 2,
-            author = "Мария Петрова",
-            authorJob = "Дизайнер",
-            authorAvatar = "https://via.placeholder.com/150",
-            content = "Отличная погода сегодня!",
-            published = "2024-01-14T15:45:00Z",
-            coordinates = null,
-            link = null,
-            mentionIds = listOf(1),
-            mentionedMe = true,
-            likeOwnerIds = listOf(1, 3),
-            likedByMe = true,
-            attachment = null
-        )
-    )
-
-    override val data: Flow<List<Post>> = flow {
-        emit(testPosts) // Временно возвращаем тестовые данные
-    }
+        remoteMediator = PostRemoteMediator(api, db),
+        pagingSourceFactory = { dao.pagingSource() }
+    ).flow  // УБИРАЕМ .map преобразование!
 
     override suspend fun getAll() {
         try {
-            val response = api.getAll()
+            val response = api.getLatest(20)
             if (response.isSuccessful) {
                 val body = response.body()
                 if (body != null) {
-                    dao.insert(body.map { PostEntity.fromDto(it) })
+                    val entities = body.map { post ->
+                        PostEntity(
+                            id = post.id,
+                            authorId = post.authorId,
+                            author = post.author,
+                            authorJob = post.authorJob,
+                            authorAvatar = post.authorAvatar,
+                            content = post.content,
+                            published = post.published,
+                            coordinates = post.coordinates?.let {
+                                ru.netology.nmedia.entity.CoordinatesEmbeddable(
+                                    lat = it.lat.toString(),
+                                    long = it.long.toString()
+                                )
+                            },
+                            link = post.link,
+                            mentionIds = post.mentionIds,
+                            mentionedMe = post.mentionedMe,
+                            likeOwnerIds = post.likeOwnerIds,
+                            likedByMe = post.likedByMe,
+                            attachment = post.attachment?.let {
+                                ru.netology.nmedia.entity.AttachmentEmbeddable(
+                                    url = it.url,
+                                    type = it.type
+                                )
+                            }
+                        )
+                    }
+                    dao.insert(entities)
                 }
             }
         } catch (e: Exception) {
@@ -79,7 +79,33 @@ class PostRepositoryImpl @Inject constructor(
             if (response.isSuccessful) {
                 val body = response.body()
                 if (body != null) {
-                    dao.insert(PostEntity.fromDto(body))
+                    val entity = PostEntity(
+                        id = body.id,
+                        authorId = body.authorId,
+                        author = body.author,
+                        authorJob = body.authorJob,
+                        authorAvatar = body.authorAvatar,
+                        content = body.content,
+                        published = body.published,
+                        coordinates = body.coordinates?.let {
+                            ru.netology.nmedia.entity.CoordinatesEmbeddable(
+                                lat = it.lat.toString(),
+                                long = it.long.toString()
+                            )
+                        },
+                        link = body.link,
+                        mentionIds = body.mentionIds,
+                        mentionedMe = body.mentionedMe,
+                        likeOwnerIds = body.likeOwnerIds,
+                        likedByMe = body.likedByMe,
+                        attachment = body.attachment?.let {
+                            ru.netology.nmedia.entity.AttachmentEmbeddable(
+                                url = it.url,
+                                type = it.type
+                            )
+                        }
+                    )
+                    dao.insert(entity)
                 }
             }
         } catch (e: Exception) {
@@ -93,7 +119,33 @@ class PostRepositoryImpl @Inject constructor(
             if (response.isSuccessful) {
                 val body = response.body()
                 if (body != null) {
-                    dao.insert(PostEntity.fromDto(body))
+                    val entity = PostEntity(
+                        id = body.id,
+                        authorId = body.authorId,
+                        author = body.author,
+                        authorJob = body.authorJob,
+                        authorAvatar = body.authorAvatar,
+                        content = body.content,
+                        published = body.published,
+                        coordinates = body.coordinates?.let {
+                            ru.netology.nmedia.entity.CoordinatesEmbeddable(
+                                lat = it.lat.toString(),
+                                long = it.long.toString()
+                            )
+                        },
+                        link = body.link,
+                        mentionIds = body.mentionIds,
+                        mentionedMe = body.mentionedMe,
+                        likeOwnerIds = body.likeOwnerIds,
+                        likedByMe = body.likedByMe,
+                        attachment = body.attachment?.let {
+                            ru.netology.nmedia.entity.AttachmentEmbeddable(
+                                url = it.url,
+                                type = it.type
+                            )
+                        }
+                    )
+                    dao.insert(entity)
                 }
             }
         } catch (e: Exception) {
@@ -118,7 +170,33 @@ class PostRepositoryImpl @Inject constructor(
             if (response.isSuccessful) {
                 val body = response.body()
                 if (body != null) {
-                    dao.insert(PostEntity.fromDto(body))
+                    val entity = PostEntity(
+                        id = body.id,
+                        authorId = body.authorId,
+                        author = body.author,
+                        authorJob = body.authorJob,
+                        authorAvatar = body.authorAvatar,
+                        content = body.content,
+                        published = body.published,
+                        coordinates = body.coordinates?.let {
+                            ru.netology.nmedia.entity.CoordinatesEmbeddable(
+                                lat = it.lat.toString(),
+                                long = it.long.toString()
+                            )
+                        },
+                        link = body.link,
+                        mentionIds = body.mentionIds,
+                        mentionedMe = body.mentionedMe,
+                        likeOwnerIds = body.likeOwnerIds,
+                        likedByMe = body.likedByMe,
+                        attachment = body.attachment?.let {
+                            ru.netology.nmedia.entity.AttachmentEmbeddable(
+                                url = it.url,
+                                type = it.type
+                            )
+                        }
+                    )
+                    dao.insert(entity)
                 }
             }
         } catch (e: Exception) {
@@ -147,7 +225,7 @@ class PostRepositoryImpl @Inject constructor(
         }
     }
 
-    override fun getNewerCount(id: Long): Flow<Int> = flow {
-        emit(0)
+    override suspend fun getNewerCount(id: Long): Int {
+        return dao.getNewerCount(id)
     }
 }
