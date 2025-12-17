@@ -6,6 +6,7 @@ import okhttp3.logging.HttpLoggingInterceptor
 import okhttp3.Response
 import ru.netology.nmedia.BuildConfig
 import ru.netology.nmedia.auth.AppAuth
+import ru.netology.nmedia.auth.TokenHolder
 
 fun loggingInterceptor() = HttpLoggingInterceptor()
     .apply {
@@ -14,9 +15,15 @@ fun loggingInterceptor() = HttpLoggingInterceptor()
         }
     }
 
-// ВРЕМЕННО УПРОЩАЕМ - без зависимости от AppAuth
-fun authInterceptor() = fun(chain: Interceptor.Chain): Response {
-    // Временно пустой - добавим токен позже
+fun authInterceptor(tokenHolder: TokenHolder) = fun(chain: Interceptor.Chain): Response {
+
+    tokenHolder.token?.let { token ->
+        val newRequest = chain.request().newBuilder()
+            .addHeader("Authorization", "Bearer $token")
+            .build()
+        return chain.proceed(newRequest)
+    }
+
     return chain.proceed(chain.request())
 }
 

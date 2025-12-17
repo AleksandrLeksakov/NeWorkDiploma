@@ -16,8 +16,9 @@ import javax.inject.Singleton
 
 @Singleton
 class AppAuth @Inject constructor(
-    @ApplicationContext private val context: Context
-    // УБИРАЕМ ВСЕ сетевые зависимости!
+    @ApplicationContext private val context: Context,
+    private val tokenHolder: TokenHolder
+
 ) {
     private val prefs = context.getSharedPreferences("auth", Context.MODE_PRIVATE)
     private val scope = CoroutineScope(Dispatchers.Default)
@@ -37,13 +38,13 @@ class AppAuth @Inject constructor(
     @Synchronized
     fun setAuth(id: Long, token: String) {
         _authState.value = AuthState(id, token)
+        tokenHolder.token = token
         with(prefs.edit()) {
             putString(TOKEN_KEY, token)
             putLong(ID_KEY, id)
             apply()
         }
-        // Временно отключаем отправку push токена
-        // sendPushToken()
+
     }
 
     @Synchronized

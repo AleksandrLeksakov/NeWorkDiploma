@@ -8,6 +8,7 @@ import okhttp3.OkHttpClient
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import ru.netology.nmedia.BuildConfig
+import ru.netology.nmedia.auth.TokenHolder
 import javax.inject.Singleton
 
 @InstallIn(SingletonComponent::class)
@@ -16,9 +17,9 @@ class ApiServiceModule {
 
     @Singleton
     @Provides
-    fun provideOkHttpClient(): OkHttpClient = OkHttpClient.Builder()
+    fun provideOkHttpClient(tokenHolder: TokenHolder): OkHttpClient = OkHttpClient.Builder()
         .addInterceptor(apiKeyInterceptor())  // Только API ключ
-        .addInterceptor(authInterceptor())    // Временно пустой
+        .addInterceptor(authInterceptor(tokenHolder))    // Временно пустой
         .addInterceptor(loggingInterceptor())
         .build()
 
