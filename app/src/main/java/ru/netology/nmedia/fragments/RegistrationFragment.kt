@@ -5,6 +5,7 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -85,17 +86,26 @@ class RegistrationFragment : Fragment() {
             val name = binding.nameEditText.text.toString()
             val repeatPassword = binding.confirmPasswordEditText.text.toString()
 
+            Log.d("RegistrationFragment", "Нажата кнопка регистрации")
+            Log.d("RegistrationFragment", "login=$login, name=$name, password.length=${password.length}")
+
             if (validateInput(login, password, repeatPassword, name)) {
                 binding.progressBar.isVisible = true
+                Log.d("RegistrationFragment", "Валидация пройдена, вызываем регистрацию")
                 viewModel.register(login, password, name, avatarUri)
+            } else {
+                Log.d("RegistrationFragment", "Валидация не пройдена")
             }
         }
 
+        // ДОБАВЛЕНЫ ОБРАБОТЧИКИ ДЛЯ КНОПОК АВАТАРА
         binding.selectAvatarButton.setOnClickListener {
+            Log.d("RegistrationFragment", "Нажата кнопка выбора аватара")
             requestGalleryPermission()
         }
 
         binding.avatarImageView.setOnClickListener {
+            Log.d("RegistrationFragment", "Нажат ImageView аватара")
             requestGalleryPermission()
         }
     }

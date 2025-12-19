@@ -1,6 +1,7 @@
 package ru.netology.nmedia.viewmodel
 
 import android.net.Uri
+import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -13,7 +14,7 @@ import okhttp3.RequestBody.Companion.asRequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
 import ru.netology.nmedia.api.ApiService
 import ru.netology.nmedia.auth.AppAuth
-import ru.netology.nmedia.dto.Credentials
+import ru.netology.nmedia.dto.AuthResponse
 import java.io.File
 import javax.inject.Inject
 
@@ -37,51 +38,101 @@ class AuthViewModel @Inject constructor(
 
     fun authenticate(login: String, password: String) = viewModelScope.launch {
         try {
-            val response = apiService.auth(Credentials(login, password))
+            Log.d("AuthViewModel", "Аутентификация: login=$login, pass=$password")
+            val response = apiService.auth(login = login, pass = password)
+            Log.d("AuthViewModel", "Ответ аутентификации: ${response.code()}")
 
             if (response.isSuccessful) {
                 response.body()?.let { authResponse ->
+                    Log.d("AuthViewModel", "Успешная аутентификация: id=${authResponse.id}")
                     appAuth.setAuth(authResponse.id, authResponse.token)
                     _authSuccess.postValue(Unit)
                 } ?: run {
+                    Log.e("AuthViewModel", "Пустое тело ответа")
                     _authError.postValue("Неправильный логин или пароль")
                 }
             } else {
-                _authError.postValue("Неправильный логин или пароль")
+                Log.e("AuthViewModel", "Ошибка аутентификации: ${response.code()}")
+                when (response.code()) {
+                    400 -> _authError.postValue("Неправильный пароль")
+                    404 -> _authError.postValue("Юзер незарегистрирован")
+                    else -> _authError.postValue("Ошибка: ${response.code()}")
+                }
             }
         } catch (e: Exception) {
+            Log.e("AuthViewModel", "Исключение при аутентификации", e)
             _authError.postValue("Ошибка сети: ${e.message}")
         }
     }
 
     fun register(login: String, password: String, name: String, avatarUri: Uri?) = viewModelScope.launch {
         try {
-            val loginBody = login.toRequestBody("text/plain".toMediaType())
-            val passwordBody = password.toRequestBody("text/plain".toMediaType())
-            val nameBody = name.toRequestBody("text/plain".toMediaType())
+            Log.d("AuthViewModel", "Регистрация: login=$login, name=$name, pass=$password")
 
-            val avatarPart = avatarUri?.let { uri ->
-                val file = File(uri.path ?: return@let null)
-                val requestFile = file.asRequestBody("image/*".toMediaType())
-                MultipartBody.Part.createFormData("avatar", file.name, requestFile)
-            }
-
-            val response = apiService.register(loginBody, passwordBody, nameBody, avatarPart)
-
-            if (response.isSuccessful) {
-                response.body()?.let { authResponse ->
-                    appAuth.setAuth(authResponse.id, authResponse.token)
-                    _registrationSuccess.postValue(Unit)
-                } ?: run {
-                    _registrationError.postValue("Ошибка регистрации")
+            // ВАЖНО: всегда создаем multipart часть, даже если аватара нет
+            val avatarPart = if (avatarUri != null) {
+                // С аватаром
+                val file = File(avatarUri.path ?: "")
+                if (file.exists()) {
+                    Log.d("AuthViewModel", "Загрузка аватара: ${file.path}")
+                    val requestFile = file.asRequestBody("image/*".toMediaType())
+                    MultipartBody.Part.createFormData("avatar", file.name, requestFile)
+                } else {
+                    // Файл не существует - создаем пустую часть
+                    Log.w("AuthViewModel", "Файл аватара не найден, создаем пустую часть")
+                    createEmptyAvatarPart()
                 }
             } else {
-                _registrationError.postValue("Пользователь с таким логином уже зарегистрирован")
+                // Без аватара - создаем пустую часть
+                createEmptyAvatarPart()
             }
+
+            val response = apiService.register(
+                login = login,
+                pass = password,
+                name = name,
+                avatar = avatarPart
+            )
+
+            handleRegistrationResponse(response)
         } catch (e: Exception) {
+            Log.e("AuthViewModel", "Исключение при регистрации", e)
             _registrationError.postValue("Ошибка сети: ${e.message}")
         }
     }
+
+    private fun createEmptyAvatarPart(): MultipartBody.Part {
+        // Создаем пустой файл для multipart
+        val emptyBody = "".toRequestBody("application/octet-stream".toMediaType())
+        return MultipartBody.Part.createFormData("avatar", "", emptyBody)
+        // ИЛИ альтернативный вариант с пустым текстовым полем:
+        // return MultipartBody.Part.createFormData("avatar", "", "".toRequestBody())
+    }
+
+    private fun handleRegistrationResponse(response: retrofit2.Response<AuthResponse>) {
+        Log.d("AuthViewModel", "Ответ регистрации: ${response.code()}")
+
+        if (response.isSuccessful) {
+            response.body()?.let { authResponse ->
+                Log.d("AuthViewModel", "Успешная регистрация: id=${authResponse.id}")
+                appAuth.setAuth(authResponse.id, authResponse.token)
+                _registrationSuccess.postValue(Unit)
+            } ?: run {
+                Log.e("AuthViewModel", "Пустое тело ответа")
+                _registrationError.postValue("Ошибка регистрации")
+            }
+        } else {
+            Log.e("AuthViewModel", "Ошибка регистрации: ${response.code()}")
+            when (response.code()) {
+                403 -> _registrationError.postValue("Юзер уже зарегистрирован")
+                415 -> _registrationError.postValue("Неправильный формат фото")
+                else -> _registrationError.postValue("Ошибка регистрации: ${response.code()}")
+            }
+        }
+    }
+
+
+
 
     fun logout() {
         appAuth.removeAuth()

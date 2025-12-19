@@ -1,6 +1,7 @@
 package ru.netology.nmedia.auth
 
 import android.content.Context
+import android.util.Log
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -31,6 +32,7 @@ class AppAuth @Inject constructor(
 
     @Synchronized
     fun setAuth(id: Long, token: String) {
+        Log.d("AppAuth", "Установка авторизации: id=$id, token=${token.take(10)}...")
         _authState.value = AuthState(id, token)
         tokenHolder.token = token
 
@@ -38,6 +40,8 @@ class AppAuth @Inject constructor(
             .putString(TOKEN_KEY, token)
             .putLong(ID_KEY, id)
             .apply()
+
+        Log.d("AppAuth", "Авторизация сохранена в SharedPreferences")
     }
 
     @Synchronized

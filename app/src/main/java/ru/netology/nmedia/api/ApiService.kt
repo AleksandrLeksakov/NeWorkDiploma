@@ -9,16 +9,22 @@ import ru.netology.nmedia.dto.*
 interface ApiService {
     // ========== AUTHENTICATION & REGISTRATION ==========
     @POST("api/users/authentication")
-    suspend fun auth(@Body credentials: Credentials): Response<AuthResponse>
-
-    @POST("api/users/registration")
-    @Multipart
-    suspend fun register(
-        @Part("login") login: RequestBody,
-        @Part("password") password: RequestBody,
-        @Part("name") name: RequestBody,
-        @Part avatar: MultipartBody.Part?
+    suspend fun auth(
+        @Query("login") login: String,
+        @Query("pass") pass: String
     ): Response<AuthResponse>
+
+    // ОДИН метод регистрации, ВСЕГДА multipart
+    @Multipart
+    @POST("api/users/registration")
+    suspend fun register(
+        @Query("login") login: String,
+        @Query("pass") pass: String,
+        @Query("name") name: String,
+        @Part avatar: MultipartBody.Part  // Убрали "?", теперь всегда обязателен
+    ): Response<AuthResponse>
+
+
 
     // ========== POSTS ==========
     @GET("api/posts")

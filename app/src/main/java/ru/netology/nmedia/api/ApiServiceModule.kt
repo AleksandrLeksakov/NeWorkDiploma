@@ -1,5 +1,6 @@
 package ru.netology.nmedia.api
 
+import android.util.Log
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -32,15 +33,30 @@ class ApiServiceModule {
         .writeTimeout(30, TimeUnit.SECONDS)
         .build()
 
+
     @Singleton
     @Provides
     fun provideLoggingInterceptor(): HttpLoggingInterceptor =
-        HttpLoggingInterceptor().apply {
+        HttpLoggingInterceptor(object : HttpLoggingInterceptor.Logger {
+            override fun log(message: String) {
+                // Фильтруем и форматируем логи
+                when {
+                    message.startsWith("-->") -> Log.d("OkHttp", "🚀 REQUEST: $message")
+                    message.startsWith("<--") -> Log.d("OkHttp", "📥 RESPONSE: $message")
+                    message.startsWith("{") || message.startsWith("[") -> {
+                        // Красиво форматируем JSON
+                        Log.d("OkHttp", "📄 BODY: $message")
+                    }
+                    else -> Log.d("OkHttp", message)
+                }
+            }
+        }).apply {
             if (BuildConfig.DEBUG) {
                 level = HttpLoggingInterceptor.Level.BODY
+            } else {
+                level = HttpLoggingInterceptor.Level.NONE
             }
         }
-
     @Singleton
     @Provides
     fun provideApiKeyInterceptor(): ApiKeyInterceptor = ApiKeyInterceptor()
