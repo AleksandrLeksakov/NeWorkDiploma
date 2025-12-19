@@ -2,15 +2,14 @@ package ru.netology.nmedia.view
 
 import android.widget.ImageView
 import com.bumptech.glide.Glide
-import com.bumptech.glide.load.resource.bitmap.BitmapTransformation
 import com.bumptech.glide.load.resource.bitmap.CircleCrop
+import ru.netology.nmedia.R
 
-fun ImageView.load(url: String, vararg transforms: BitmapTransformation = emptyArray()) =
+fun ImageView.loadCircleCrop(url: String, placeholderResId: Int = R.drawable.ic_image_placeholder) {
     Glide.with(this)
         .load(url)
-        .timeout(10_000)
-        .transform(*transforms)
+        .placeholder(placeholderResId)
+        .error(placeholderResId)
+        .transform(CircleCrop())
         .into(this)
-
-fun ImageView.loadCircleCrop(url: String, vararg transforms: BitmapTransformation = emptyArray()) =
-    load(url, CircleCrop(), *transforms)
+}

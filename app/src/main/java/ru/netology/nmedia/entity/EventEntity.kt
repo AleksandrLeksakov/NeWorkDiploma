@@ -2,7 +2,7 @@ package ru.netology.nmedia.entity
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
-import ru.netology.nmedia.dto.EventType
+import ru.netology.nmedia.enumeration.EventType
 import ru.netology.nmedia.enumeration.AttachmentType
 
 @Entity

@@ -11,11 +11,13 @@ import android.view.MenuItem
 import android.view.View
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
-import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.MenuProvider
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.NavController
 import androidx.navigation.findNavController
 import androidx.navigation.fragment.NavHostFragment
@@ -24,11 +26,11 @@ import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability
 import com.google.firebase.messaging.FirebaseMessaging
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
 import ru.netology.nmedia.R
 import ru.netology.nmedia.auth.AppAuth
 import ru.netology.nmedia.databinding.ActivityAppBinding
 import ru.netology.nmedia.fragments.NewPostFragment.Companion.textArg
-import ru.netology.nmedia.viewmodel.AuthViewModel
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -36,8 +38,6 @@ class MainActivity : AppCompatActivity() {
 
     @Inject
     lateinit var auth: AppAuth
-
-    private val authViewModel: AuthViewModel by viewModels() // ИСПРАВЛЕНО имя
 
     private lateinit var binding: ActivityAppBinding
 
@@ -77,9 +77,13 @@ class MainActivity : AppCompatActivity() {
 
         setupBottomNavigation()
 
-        // ИСПРАВЛЕНО: используем authViewModel
-        authViewModel.authState.observe(this) { state ->
-            invalidateOptionsMenu()
+        // НАБЛЮДАЕМ ЗА FLOW В lifecycleScope
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                auth.authStateFlow.collect { authState ->
+                    invalidateOptionsMenu()
+                }
+            }
         }
 
         FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
@@ -100,7 +104,7 @@ class MainActivity : AppCompatActivity() {
             override fun onCreateMenu(menu: Menu, menuInflater: MenuInflater) {
                 menuInflater.inflate(R.menu.menu_actionbar, menu)
 
-                // ИСПРАВЛЕНО: проверка авторизации
+                // Проверка авторизации через auth
                 val isAuthenticated = auth.authStateFlow.value.token != null
 
                 menu.let {
@@ -112,14 +116,27 @@ class MainActivity : AppCompatActivity() {
             override fun onMenuItemSelected(menuItem: MenuItem): Boolean =
                 when (menuItem.itemId) {
                     R.id.signin -> {
-                        // TODO: Переход на экран входа
-                        findNavController(R.id.nav_host_fragment).navigate(R.id.loginFragment)
+                        try {
+                            findNavController(R.id.nav_host_fragment)
+                                .navigate(R.id.loginFragment)
+                        } catch (e: Exception) {
+                            // Простой переход без action
+                            findNavController(R.id.nav_host_fragment).apply {
+                                navigate(R.id.loginFragment)
+                            }
+                        }
                         true
                     }
 
                     R.id.signup -> {
-                        // TODO: Переход на экран регистрации
-                        findNavController(R.id.nav_host_fragment).navigate(R.id.registrationFragment)
+                        try {
+                            findNavController(R.id.nav_host_fragment)
+                                .navigate(R.id.registrationFragment)
+                        } catch (e: Exception) {
+                            findNavController(R.id.nav_host_fragment).apply {
+                                navigate(R.id.registrationFragment)
+                            }
+                        }
                         true
                     }
 

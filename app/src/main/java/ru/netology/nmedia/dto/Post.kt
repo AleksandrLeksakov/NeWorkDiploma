@@ -1,6 +1,7 @@
 package ru.netology.nmedia.dto
 
 import com.google.gson.annotations.SerializedName
+import ru.netology.nmedia.entity.PostEntity
 
 data class Post(
     @SerializedName("id")
@@ -51,7 +52,32 @@ data class Post(
     // Вычисляемое свойство для количества лайков
     val likes: Int get() = likeOwnerIds.size
 
-    // Вычисляемое свойство для определения владельца (не из API!)
-    // Это будет вычисляться на клиенте, а не приходить с сервера
-    // Удалите ownedByMe из DTO, так как его нет в API
+    // Вычисляемое свойство для shares (если есть в API)
+    // val shares: Int get() = shareOwnerIds.size
+
+    companion object {
+        fun fromEntity(entity: PostEntity): Post = Post(
+            id = entity.id,
+            authorId = entity.authorId,
+            author = entity.author,
+            authorJob = entity.authorJob,
+            authorAvatar = entity.authorAvatar,
+            content = entity.content,
+            published = entity.published,
+            coordinates = entity.coordinates?.toDto(),
+            link = entity.link,
+            mentionIds = entity.mentionIds,
+            mentionedMe = entity.mentionedMe,
+            likeOwnerIds = entity.likeOwnerIds,
+            likedByMe = entity.likedByMe,
+            attachment = entity.attachment?.toDto(),
+            users = emptyMap() // Не храним в БД
+        )
+    }
+
+    // Метод для проверки, принадлежит ли пост текущему пользователю
+    // Будем вычислять в ViewModel на основе authorId и текущего userId
+    fun isOwnedByMe(currentUserId: Long?): Boolean {
+        return currentUserId != null && authorId == currentUserId
+    }
 }

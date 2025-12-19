@@ -1,5 +1,6 @@
 package ru.netology.nmedia.viewmodel
 
+import android.net.Uri
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -9,107 +10,82 @@ import kotlinx.coroutines.launch
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.asRequestBody
+import okhttp3.RequestBody.Companion.toRequestBody
 import ru.netology.nmedia.api.ApiService
 import ru.netology.nmedia.auth.AppAuth
-import ru.netology.nmedia.dto.AuthState
 import ru.netology.nmedia.dto.Credentials
-import ru.netology.nmedia.dto.RegistrationData
 import java.io.File
 import javax.inject.Inject
 
 @HiltViewModel
 class AuthViewModel @Inject constructor(
-    private val api: ApiService,
-    private val auth: AppAuth
+    private val apiService: ApiService,
+    private val appAuth: AppAuth
 ) : ViewModel() {
 
-    private val _authState = MutableLiveData<AuthState>()
-    val authState: LiveData<AuthState> = _authState
+    private val _authError = MutableLiveData<String>()
+    val authError: LiveData<String> = _authError
 
-    private val _error = MutableLiveData<String?>()
-    val error: LiveData<String?> = _error
+    private val _authSuccess = MutableLiveData<Unit>()
+    val authSuccess: LiveData<Unit> = _authSuccess
 
-    private val _isLoading = MutableLiveData(false)
-    val isLoading: LiveData<Boolean> = _isLoading
+    private val _registrationError = MutableLiveData<String>()
+    val registrationError: LiveData<String> = _registrationError
 
-    init {
-        _authState.value = auth.authStateFlow.value
-    }
+    private val _registrationSuccess = MutableLiveData<Unit>()
+    val registrationSuccess: LiveData<Unit> = _registrationSuccess
 
-    fun auth(login: String, password: String) {
-        viewModelScope.launch {
-            try {
-                _isLoading.value = true
-                val response = api.auth(Credentials(login, password))
-                if (response.isSuccessful) {
-                    val body = response.body()
-                    if (body != null) {
-                        auth.setAuth(body.id, body.token)
-                        _authState.value = auth.authStateFlow.value
-                    }
-                } else {
-                    _error.value = "Неправильный логин или пароль"
+    fun authenticate(login: String, password: String) = viewModelScope.launch {
+        try {
+            val response = apiService.auth(Credentials(login, password))
+
+            if (response.isSuccessful) {
+                response.body()?.let { authResponse ->
+                    appAuth.setAuth(authResponse.id, authResponse.token)
+                    _authSuccess.postValue(Unit)
+                } ?: run {
+                    _authError.postValue("Неправильный логин или пароль")
                 }
-            } catch (e: Exception) {
-                _error.value = "Ошибка сети: ${e.message}"
-            } finally {
-                _isLoading.value = false
+            } else {
+                _authError.postValue("Неправильный логин или пароль")
             }
+        } catch (e: Exception) {
+            _authError.postValue("Ошибка сети: ${e.message}")
         }
     }
 
-    fun register(login: String, name: String, password: String, avatarFile: File? = null) {
-        viewModelScope.launch {
-            try {
-                _isLoading.value = true
+    fun register(login: String, password: String, name: String, avatarUri: Uri?) = viewModelScope.launch {
+        try {
+            val loginBody = login.toRequestBody("text/plain".toMediaType())
+            val passwordBody = password.toRequestBody("text/plain".toMediaType())
+            val nameBody = name.toRequestBody("text/plain".toMediaType())
 
-                var avatarMediaId: String? = null
-
-                // Загружаем аватар если есть
-                avatarFile?.let { file ->
-                    val requestFile = file.asRequestBody("image/*".toMediaType())
-                    val body = MultipartBody.Part.createFormData(
-                        "file",
-                        file.name,
-                        requestFile
-                    )
-                    val response = api.upload(body)
-                    if (response.isSuccessful) {
-                        avatarMediaId = response.body()?.id
-                    }
-                }
-
-                val registrationData = RegistrationData(
-                    login = login,
-                    name = name,
-                    password = password,
-                    avatar = avatarMediaId
-                )
-
-                val response = api.register(registrationData)
-                if (response.isSuccessful) {
-                    val body = response.body()
-                    if (body != null) {
-                        auth.setAuth(body.id, body.token)
-                        _authState.value = auth.authStateFlow.value
-                    }
-                } else {
-                    _error.value = "Пользователь с таким логином уже зарегистрирован"
-                }
-            } catch (e: Exception) {
-                _error.value = "Ошибка: ${e.message}"
-            } finally {
-                _isLoading.value = false
+            val avatarPart = avatarUri?.let { uri ->
+                val file = File(uri.path ?: return@let null)
+                val requestFile = file.asRequestBody("image/*".toMediaType())
+                MultipartBody.Part.createFormData("avatar", file.name, requestFile)
             }
+
+            val response = apiService.register(loginBody, passwordBody, nameBody, avatarPart)
+
+            if (response.isSuccessful) {
+                response.body()?.let { authResponse ->
+                    appAuth.setAuth(authResponse.id, authResponse.token)
+                    _registrationSuccess.postValue(Unit)
+                } ?: run {
+                    _registrationError.postValue("Ошибка регистрации")
+                }
+            } else {
+                _registrationError.postValue("Пользователь с таким логином уже зарегистрирован")
+            }
+        } catch (e: Exception) {
+            _registrationError.postValue("Ошибка сети: ${e.message}")
         }
     }
 
     fun logout() {
-        auth.removeAuth()
-        _authState.value = auth.authStateFlow.value
+        appAuth.removeAuth()
     }
 
-    fun clearError() {
-        _error.value = null
-    }
+    fun isAuthenticated(): Boolean = appAuth.isAuthenticated()
 }

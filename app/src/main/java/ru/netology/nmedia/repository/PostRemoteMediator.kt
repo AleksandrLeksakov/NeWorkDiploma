@@ -78,40 +78,12 @@ class PostRemoteMediator(
                             nextKey = posts.lastOrNull()?.id?.takeIf { it != post.id }
                         )
                     }
-                    remoteKeys.forEach { key ->
-                        postRemoteKeyDao.insert(key)  // Вставляем каждый ключ отдельно
-                    }
+                    postRemoteKeyDao.insert(remoteKeys)
                 }
 
-                // Сохраняем посты (предполагаем что у Post есть метод toEntity())
+                // Сохраняем посты используя метод fromDto
                 val postEntities = posts.map { post ->
-                    // Преобразуем Post в PostEntity
-                    PostEntity(
-                        id = post.id,
-                        authorId = post.authorId,
-                        author = post.author,
-                        authorJob = post.authorJob,
-                        authorAvatar = post.authorAvatar,
-                        content = post.content,
-                        published = post.published,
-                        coordinates = post.coordinates?.let {
-                            ru.netology.nmedia.entity.CoordinatesEmbeddable(
-                                lat = it.lat.toString(),
-                                long = it.long.toString()
-                            )
-                        },
-                        link = post.link,
-                        mentionIds = post.mentionIds,
-                        mentionedMe = post.mentionedMe,
-                        likeOwnerIds = post.likeOwnerIds,
-                        likedByMe = post.likedByMe,
-                        attachment = post.attachment?.let {
-                            ru.netology.nmedia.entity.AttachmentEmbeddable(
-                                url = it.url,
-                                type = it.type
-                            )
-                        }
-                    )
+                    PostEntity.fromDto(post)  // Используем метод fromDto
                 }
                 postDao.insert(postEntities)
             }

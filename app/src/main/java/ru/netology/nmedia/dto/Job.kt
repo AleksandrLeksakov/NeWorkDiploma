@@ -2,6 +2,7 @@ package ru.netology.nmedia.dto
 
 import com.google.gson.annotations.SerializedName
 import java.text.SimpleDateFormat
+import java.util.Date
 import java.util.Locale
 
 data class Job(
@@ -28,13 +29,18 @@ data class Job(
             val inputFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault())
             val outputFormat = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
 
-            val startDate = inputFormat.parse(start)
+            val startDate = inputFormat.parse(start) ?: return start
+
             val startFormatted = outputFormat.format(startDate)
 
             if (finish != null) {
                 val finishDate = inputFormat.parse(finish)
-                val finishFormatted = outputFormat.format(finishDate)
-                "$startFormatted - $finishFormatted"
+                if (finishDate != null) {
+                    val finishFormatted = outputFormat.format(finishDate)
+                    "$startFormatted - $finishFormatted"
+                } else {
+                    "$startFormatted - $finish"
+                }
             } else {
                 "$startFormatted - настоящее время"
             }

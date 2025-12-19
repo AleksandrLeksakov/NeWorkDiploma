@@ -1,63 +1,53 @@
 package ru.netology.nmedia.fragments
 
 import android.Manifest
-import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
-import androidx.fragment.app.viewModels
+import androidx.fragment.app.activityViewModels
 import androidx.navigation.fragment.findNavController
-import com.bumptech.glide.Glide
+import com.google.android.material.snackbar.Snackbar
 import dagger.hilt.android.AndroidEntryPoint
-import ru.netology.nmedia.R
 import ru.netology.nmedia.databinding.FragmentRegistrationBinding
 import ru.netology.nmedia.viewmodel.AuthViewModel
-import java.io.File
-import java.io.FileOutputStream
 
 @AndroidEntryPoint
 class RegistrationFragment : Fragment() {
 
-    private lateinit var binding: FragmentRegistrationBinding
-    private val viewModel: AuthViewModel by viewModels()
-    private var selectedImageUri: Uri? = null
-    private var tempImageFile: File? = null
+    private var _binding: FragmentRegistrationBinding? = null
+    private val binding get() = _binding!!
 
-    private val requestPermissionLauncher = registerForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { isGranted ->
-        if (isGranted) {
-            pickImage()
-        } else {
-            Toast.makeText(
-                requireContext(),
-                "Нужно разрешение для выбора фото",
-                Toast.LENGTH_SHORT
-            ).show()
-        }
-    }
+    private val viewModel: AuthViewModel by activityViewModels()
+    private var avatarUri: Uri? = null
 
     private val pickImageLauncher = registerForActivityResult(
         ActivityResultContracts.GetContent()
     ) { uri ->
         uri?.let {
-            selectedImageUri = it
-            // Создаем временный файл
-            tempImageFile = createTempFile(uri)
+            avatarUri = it
+            binding.avatarImageView.setImageURI(it)
+        }
+    }
 
-            Glide.with(binding.avatarImageView)
-                .load(uri)
-                .circleCrop()
-                .placeholder(R.drawable.ic_launcher_foreground)
-                .into(binding.avatarImageView)
+    private val requestPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            pickImageLauncher.launch("image/*")
+        } else {
+            Snackbar.make(
+                binding.root,
+                "Для выбора аватара нужны разрешения",
+                Snackbar.LENGTH_LONG
+            ).show()
         }
     }
 
@@ -66,146 +56,120 @@ class RegistrationFragment : Fragment() {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
-        binding = FragmentRegistrationBinding.inflate(inflater, container, false)
+        _binding = FragmentRegistrationBinding.inflate(inflater, container, false)
         return binding.root
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // Устанавливаем placeholder при создании
-        binding.avatarImageView.setBackgroundResource(R.color.purple_500)
-
-        setupClickListeners()
         setupObservers()
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        // Удаляем временный файл
-        tempImageFile?.delete()
-    }
-
-    private fun setupClickListeners() {
-        binding.avatarImageView.setOnClickListener {
-            checkPermissionAndPickImage()
-        }
-
-        binding.selectAvatarButton.setOnClickListener {
-            checkPermissionAndPickImage()
-        }
-
-        binding.registerButton.setOnClickListener {
-            val login = binding.loginEditText.text.toString()
-            val name = binding.nameEditText.text.toString()
-            val password = binding.passwordEditText.text.toString()
-            val confirmPassword = binding.confirmPasswordEditText.text.toString()
-
-            if (!validateInputs(login, name, password, confirmPassword)) {
-                return@setOnClickListener
-            }
-
-            viewModel.register(login, name, password, tempImageFile)
-        }
+        setupListeners()
     }
 
     private fun setupObservers() {
-        viewModel.authState.observe(viewLifecycleOwner) { state ->
-            if (state.token != null) {
-                findNavController().popBackStack()
-            }
+        viewModel.registrationSuccess.observe(viewLifecycleOwner) {
+            findNavController().navigateUp()
         }
 
-        viewModel.error.observe(viewLifecycleOwner) { error ->
-            error?.let {
-                Toast.makeText(requireContext(), it, Toast.LENGTH_SHORT).show()
-                viewModel.clearError()
-            }
-        }
-
-        viewModel.isLoading.observe(viewLifecycleOwner) { isLoading ->
-            binding.progressBar.isVisible = isLoading
-            binding.registerButton.isEnabled = !isLoading
+        viewModel.registrationError.observe(viewLifecycleOwner) { error ->
+            binding.progressBar.isVisible = false
+            Snackbar.make(binding.root, error, Snackbar.LENGTH_LONG).show()
         }
     }
 
-    private fun checkPermissionAndPickImage() {
+    private fun setupListeners() {
+        binding.registerButton.setOnClickListener {
+            val login = binding.loginEditText.text.toString()
+            val password = binding.passwordEditText.text.toString()
+            val name = binding.nameEditText.text.toString()
+            val repeatPassword = binding.confirmPasswordEditText.text.toString()
+
+            if (validateInput(login, password, repeatPassword, name)) {
+                binding.progressBar.isVisible = true
+                viewModel.register(login, password, name, avatarUri)
+            }
+        }
+
+        binding.selectAvatarButton.setOnClickListener {
+            requestGalleryPermission()
+        }
+
+        binding.avatarImageView.setOnClickListener {
+            requestGalleryPermission()
+        }
+    }
+
+    private fun validateInput(
+        login: String,
+        password: String,
+        repeatPassword: String,
+        name: String
+    ): Boolean {
+        // ПРЯМОЕ ПРИВЕДЕНИЕ ТИПА БЕЗ EXTENSION ФУНКЦИЙ
+        binding.loginInputLayout.error = if (login.isBlank()) "Введите логин" else null
+        binding.nameInputLayout.error = if (name.isBlank()) "Введите имя" else null
+
+        val passwordError = when {
+            password.isBlank() -> "Введите пароль"
+            password.length < 6 -> "Пароль должен быть не менее 6 символов"
+            else -> null
+        }
+        binding.passwordInputLayout.error = passwordError
+
+        val confirmPasswordError = when {
+            repeatPassword.isBlank() -> "Повторите пароль"
+            password != repeatPassword -> "Пароли не совпадают"
+            else -> null
+        }
+        binding.confirmPasswordInputLayout.error = confirmPasswordError
+
+        return login.isNotBlank() &&
+                name.isNotBlank() &&
+                password.isNotBlank() &&
+                password.length >= 6 &&
+                repeatPassword.isNotBlank() &&
+                password == repeatPassword
+    }
+
+    private fun requestGalleryPermission() {
+        val permission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            Manifest.permission.READ_MEDIA_IMAGES
+        } else {
+            Manifest.permission.READ_EXTERNAL_STORAGE
+        }
+
         when {
             ContextCompat.checkSelfPermission(
                 requireContext(),
-                Manifest.permission.READ_EXTERNAL_STORAGE
+                permission
             ) == PackageManager.PERMISSION_GRANTED -> {
-                pickImage()
+                pickImageLauncher.launch("image/*")
             }
-            shouldShowRequestPermissionRationale(Manifest.permission.READ_EXTERNAL_STORAGE) -> {
-                Toast.makeText(
-                    requireContext(),
-                    "Разрешение нужно для выбора аватара",
-                    Toast.LENGTH_SHORT
-                ).show()
-                requestPermissionLauncher.launch(Manifest.permission.READ_EXTERNAL_STORAGE)
+
+            shouldShowRequestPermissionRationale(permission) -> {
+                Snackbar.make(
+                    binding.root,
+                    "Приложению нужен доступ к галерее для выбора аватара",
+                    Snackbar.LENGTH_LONG
+                ).setAction("Дать доступ") {
+                    requestPermissionLauncher.launch(permission)
+                }.show()
             }
+
             else -> {
-                requestPermissionLauncher.launch(Manifest.permission.READ_EXTERNAL_STORAGE)
+                requestPermissionLauncher.launch(permission)
             }
         }
     }
 
-    private fun pickImage() {
-        pickImageLauncher.launch("image/*")
+    override fun onResume() {
+        super.onResume()
+        binding.progressBar.isVisible = false
     }
 
-    private fun createTempFile(uri: Uri): File {
-        val inputStream = requireContext().contentResolver.openInputStream(uri)
-        val tempFile = File.createTempFile("avatar_", ".jpg", requireContext().cacheDir)
-
-        inputStream?.use { input ->
-            FileOutputStream(tempFile).use { output ->
-                input.copyTo(output)
-            }
-        }
-
-        return tempFile
-    }
-
-    private fun validateInputs(
-        login: String,
-        name: String,
-        password: String,
-        confirmPassword: String
-    ): Boolean {
-        var isValid = true
-
-        if (login.isBlank()) {
-            binding.loginEditText.error = "Введите логин"
-            isValid = false
-        }
-
-        if (name.isBlank()) {
-            binding.nameEditText.error = "Введите имя"
-            isValid = false
-        }
-
-        if (password.isBlank()) {
-            binding.passwordEditText.error = "Введите пароль"
-            isValid = false
-        }
-
-        if (confirmPassword.isBlank()) {
-            binding.confirmPasswordEditText.error = "Подтвердите пароль"
-            isValid = false
-        }
-
-        if (password != confirmPassword) {
-            binding.confirmPasswordEditText.error = "Пароли не совпадают"
-            isValid = false
-        }
-
-        if (password.length < 6) {
-            binding.passwordEditText.error = "Пароль должен быть не менее 6 символов"
-            isValid = false
-        }
-
-        return isValid
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
     }
 }

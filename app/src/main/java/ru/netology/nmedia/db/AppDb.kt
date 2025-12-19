@@ -11,8 +11,11 @@ import ru.netology.nmedia.entity.PostEntity
 import ru.netology.nmedia.entity.PostRemoteKeyEntity
 
 @Database(
-    entities = [PostEntity::class, PostRemoteKeyEntity::class],
-    version = 1,
+    entities = [
+        PostEntity::class,
+        PostRemoteKeyEntity::class
+    ],
+    version = 2,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -30,9 +33,14 @@ abstract class AppDb : RoomDatabase() {
             }
         }
 
-        private fun buildDatabase(context: Context) =
-            Room.databaseBuilder(context, AppDb::class.java, "app.db")
-                .fallbackToDestructiveMigrationOnDowngrade()  // ИСПРАВЛЕНО!
+        private fun buildDatabase(context: Context): AppDb {
+            return Room.databaseBuilder(
+                context.applicationContext,
+                AppDb::class.java,
+                "app.db"
+            )
+                .fallbackToDestructiveMigration() // Без параметров - работает как раньше
                 .build()
+        }
     }
 }

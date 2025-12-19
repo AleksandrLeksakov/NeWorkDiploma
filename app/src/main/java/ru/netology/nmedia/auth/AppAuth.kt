@@ -1,15 +1,10 @@
 package ru.netology.nmedia.auth
 
 import android.content.Context
-import com.google.firebase.messaging.FirebaseMessaging
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.tasks.await
 import ru.netology.nmedia.dto.AuthState
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -18,10 +13,8 @@ import javax.inject.Singleton
 class AppAuth @Inject constructor(
     @ApplicationContext private val context: Context,
     private val tokenHolder: TokenHolder
-
 ) {
     private val prefs = context.getSharedPreferences("auth", Context.MODE_PRIVATE)
-    private val scope = CoroutineScope(Dispatchers.Default)
 
     private val _authState = MutableStateFlow<AuthState>(AuthState())
     val authStateFlow: StateFlow<AuthState> = _authState.asStateFlow()
@@ -30,8 +23,9 @@ class AppAuth @Inject constructor(
         val token = prefs.getString(TOKEN_KEY, null)
         val id = prefs.getLong(ID_KEY, 0L)
 
-        if (token != null) {
+        if (token != null && id != 0L) {
             _authState.value = AuthState(id, token)
+            tokenHolder.token = token
         }
     }
 
@@ -39,35 +33,25 @@ class AppAuth @Inject constructor(
     fun setAuth(id: Long, token: String) {
         _authState.value = AuthState(id, token)
         tokenHolder.token = token
-        with(prefs.edit()) {
-            putString(TOKEN_KEY, token)
-            putLong(ID_KEY, id)
-            apply()
-        }
 
+        prefs.edit()
+            .putString(TOKEN_KEY, token)
+            .putLong(ID_KEY, id)
+            .apply()
     }
 
     @Synchronized
     fun removeAuth() {
         _authState.value = AuthState()
-        with(prefs.edit()) {
-            remove(TOKEN_KEY)
-            remove(ID_KEY)
-            apply()
-        }
+        tokenHolder.token = null
+
+        prefs.edit()
+            .remove(TOKEN_KEY)
+            .remove(ID_KEY)
+            .apply()
     }
 
-    // Временно отключаем - добавим позже
-    // private fun sendPushToken() {
-    //     scope.launch {
-    //         try {
-    //             val pushToken = FirebaseMessaging.getInstance().token.await()
-    //             // Будем отправлять позже
-    //         } catch (e: Exception) {
-    //             e.printStackTrace()
-    //         }
-    //     }
-    // }
+    fun isAuthenticated(): Boolean = !_authState.value.token.isNullOrBlank()
 
     companion object {
         private const val TOKEN_KEY = "token"

@@ -1,6 +1,7 @@
 package ru.netology.nmedia.dto
 
 import com.google.gson.annotations.SerializedName
+import ru.netology.nmedia.enumeration.EventType
 
 data class Event(
     @SerializedName("id")
@@ -31,7 +32,7 @@ data class Event(
     val coords: Coordinates? = null,
 
     @SerializedName("type")
-    val type: String, // "ONLINE" или "OFFLINE"
+    val type: EventType, // Используем enum вместо String
 
     @SerializedName("likeOwnerIds")
     val likeOwnerIds: List<Long> = emptyList(),

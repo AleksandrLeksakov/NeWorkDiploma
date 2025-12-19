@@ -7,14 +7,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
-import androidx.paging.map
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import ru.netology.nmedia.dto.MediaUpload
 import ru.netology.nmedia.dto.Post
-import ru.netology.nmedia.entity.PostEntity
 import ru.netology.nmedia.model.FeedModelState
 import ru.netology.nmedia.model.PhotoModel
 import ru.netology.nmedia.repository.PostRepository
@@ -46,31 +43,9 @@ class PostViewModel @Inject constructor(
     private val repository: PostRepository,
 ) : ViewModel() {
 
-    // ВАРИАНТ 1: С явным указанием типов
+    // ПРОСТОЙ ВАРИАНТ - repository.data уже возвращает Flow<PagingData<Post>>
     val data: Flow<PagingData<Post>> = repository.data
-        .map { pagingData: PagingData<PostEntity> ->
-            pagingData.map { postEntity: PostEntity ->
-                postEntity.toDto()
-            }
-        }
         .cachedIn(viewModelScope)
-
-    // ВАРИАНТ 2: Альтернативный (если вариант 1 не работает)
-    /*
-    val data: Flow<PagingData<Post>> = repository.data
-        .map { pagingData ->
-            pagingData.map { postEntity ->
-                postEntity.toDto()
-            }
-        }
-        .cachedIn(viewModelScope)
-    */
-
-    // ВАРИАНТ 3: Самый простой - без map преобразования
-    /*
-    val data: Flow<PagingData<PostEntity>> = repository.data
-        .cachedIn(viewModelScope)
-    */
 
     private val _dataState = MutableLiveData<FeedModelState>(FeedModelState())
     val dataState: LiveData<FeedModelState>
@@ -98,7 +73,7 @@ class PostViewModel @Inject constructor(
     fun refreshPosts() = viewModelScope.launch {
         try {
             _dataState.value = FeedModelState(refreshing = true)
-            // Для обновления Paging можно пересоздать Pager или сбросить состояние
+            repository.getAll()  // Просто перезагружаем все
             _dataState.value = FeedModelState()
         } catch (e: Exception) {
             _dataState.value = FeedModelState(error = true)
@@ -109,12 +84,32 @@ class PostViewModel @Inject constructor(
         edited.value?.let { post ->
             viewModelScope.launch {
                 try {
+                    // Обработка медиа
                     val mediaUpload = _photo.value?.uri?.let { uri ->
                         val file = File(uri.path ?: return@let null)
                         MediaUpload(file)
                     }
 
-                    repository.save(post)
+                    // Если есть медиа, сначала загружаем его
+                    var attachmentUrl: String? = null
+                    mediaUpload?.let {
+                        val media = repository.upload(it)
+                        attachmentUrl = media.url
+                    }
+
+                    // Создаем пост с вложением
+                    val postToSave = if (attachmentUrl != null) {
+                        post.copy(
+                            attachment = ru.netology.nmedia.dto.Attachment(
+                                url = attachmentUrl!!,
+                                type = ru.netology.nmedia.enumeration.AttachmentType.IMAGE
+                            )
+                        )
+                    } else {
+                        post
+                    }
+
+                    repository.save(postToSave)
 
                     edited.value = empty
                     _photo.value = noPhoto

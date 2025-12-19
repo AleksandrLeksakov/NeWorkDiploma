@@ -60,7 +60,7 @@ data class PostEntity(
             content = content,
             published = published,
             coordinates = coordinates?.let {
-                Coordinates(it.lat, it.long)
+                Coordinates(it.lat, it.long)  // Предполагаем что lat и long - Double
             },
             link = link,
             mentionIds = mentionIds,
@@ -84,7 +84,7 @@ data class PostEntity(
                 content = dto.content,
                 published = dto.published,
                 coordinates = dto.coordinates?.let {
-                    CoordinatesEmbeddable(it.lat, it.long)
+                    CoordinatesEmbeddable(it.lat, it.long)  // Предполагаем что lat и long - Double
                 },
                 link = dto.link,
                 mentionIds = dto.mentionIds,

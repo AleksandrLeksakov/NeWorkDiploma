@@ -1,7 +1,15 @@
 package ru.netology.nmedia.dto
 
-import java.io.File
+import com.google.gson.annotations.SerializedName
 
-data class Media(val id: String)
+data class Media(
+    @SerializedName("id")
+    val id: String,
 
-data class MediaUpload(val file: File)
+    @SerializedName("url")
+    val url: String
+)
+
+data class MediaUpload(
+    val file: java.io.File
+)

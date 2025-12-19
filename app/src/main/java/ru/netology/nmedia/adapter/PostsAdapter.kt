@@ -13,8 +13,9 @@ import ru.netology.nmedia.auth.AppAuth
 import ru.netology.nmedia.databinding.CardPostBinding
 import ru.netology.nmedia.dto.Post
 import ru.netology.nmedia.extensions.formatPublishedDate
-import ru.netology.nmedia.extensions.getLikeText
+import ru.netology.nmedia.extensions.setLikeText
 import ru.netology.nmedia.view.loadCircleCrop
+
 
 interface OnInteractionListener {
     fun onLike(post: Post)
@@ -64,9 +65,9 @@ class PostsAdapter(
                     avatar.setImageResource(R.drawable.ic_image_placeholder)
                 }
 
-                // Лайки
+                // Лайки - используем новую функцию для MaterialButton
                 like.isChecked = post.likedByMe
-                like.text = getLikeText(post.likeOwnerIds.size, post.likedByMe)
+                like.setLikeText(post.likeOwnerIds.size)
 
                 // Определяем, принадлежит ли пост текущему пользователю
                 val currentUserId = appAuth.authStateFlow.value.id
