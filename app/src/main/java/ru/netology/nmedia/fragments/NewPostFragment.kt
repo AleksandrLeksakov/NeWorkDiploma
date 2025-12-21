@@ -46,6 +46,9 @@ class NewPostFragment : Fragment() {
         )
         fragmentBinding = binding
 
+
+
+
         arguments?.textArg
             ?.let(binding.edit::setText)
 

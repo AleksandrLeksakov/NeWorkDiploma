@@ -44,8 +44,21 @@ class AuthViewModel @Inject constructor(
 
             if (response.isSuccessful) {
                 response.body()?.let { authResponse ->
-                    Log.d("AuthViewModel", "Успешная аутентификация: id=${authResponse.id}")
-                    appAuth.setAuth(authResponse.id, authResponse.token)
+                    Log.d("AuthViewModel", "Успешная аутентификация: id=${authResponse.id}, token=${authResponse.token.take(10)}...")
+
+                    // Сервер может не возвращать login/name/avatar, поэтому используем переданные значения
+                    // или значения из ответа если они есть
+                    val userLogin = authResponse.login ?: login  // Используем из ответа или переданный
+                    val userName = authResponse.name ?: login     // Используем из ответа или логин как имя
+
+                    appAuth.setAuth(
+                        id = authResponse.id,
+                        token = authResponse.token,
+                        login = userLogin,
+                        name = userName,
+                        avatar = authResponse.avatar  // Может быть null
+                    )
+
                     _authSuccess.postValue(Unit)
                 } ?: run {
                     Log.e("AuthViewModel", "Пустое тело ответа")
@@ -94,7 +107,7 @@ class AuthViewModel @Inject constructor(
                 avatar = avatarPart
             )
 
-            handleRegistrationResponse(response)
+            handleRegistrationResponse(response, login, name)
         } catch (e: Exception) {
             Log.e("AuthViewModel", "Исключение при регистрации", e)
             _registrationError.postValue("Ошибка сети: ${e.message}")
@@ -105,17 +118,31 @@ class AuthViewModel @Inject constructor(
         // Создаем пустой файл для multipart
         val emptyBody = "".toRequestBody("application/octet-stream".toMediaType())
         return MultipartBody.Part.createFormData("avatar", "", emptyBody)
-        // ИЛИ альтернативный вариант с пустым текстовым полем:
-        // return MultipartBody.Part.createFormData("avatar", "", "".toRequestBody())
     }
 
-    private fun handleRegistrationResponse(response: retrofit2.Response<AuthResponse>) {
+    private fun handleRegistrationResponse(
+        response: retrofit2.Response<AuthResponse>,
+        login: String,
+        name: String
+    ) {
         Log.d("AuthViewModel", "Ответ регистрации: ${response.code()}")
 
         if (response.isSuccessful) {
             response.body()?.let { authResponse ->
                 Log.d("AuthViewModel", "Успешная регистрация: id=${authResponse.id}")
-                appAuth.setAuth(authResponse.id, authResponse.token)
+
+                // Используем данные из ответа или переданные
+                val userLogin = authResponse.login ?: login
+                val userName = authResponse.name ?: name
+
+                appAuth.setAuth(
+                    id = authResponse.id,
+                    token = authResponse.token,
+                    login = userLogin,
+                    name = userName,
+                    avatar = authResponse.avatar
+                )
+
                 _registrationSuccess.postValue(Unit)
             } ?: run {
                 Log.e("AuthViewModel", "Пустое тело ответа")
@@ -130,9 +157,6 @@ class AuthViewModel @Inject constructor(
             }
         }
     }
-
-
-
 
     fun logout() {
         appAuth.removeAuth()

@@ -14,14 +14,14 @@ interface ApiService {
         @Query("pass") pass: String
     ): Response<AuthResponse>
 
-    // ОДИН метод регистрации, ВСЕГДА multipart
+
     @Multipart
     @POST("api/users/registration")
     suspend fun register(
         @Query("login") login: String,
         @Query("pass") pass: String,
         @Query("name") name: String,
-        @Part avatar: MultipartBody.Part  // Убрали "?", теперь всегда обязателен
+        @Part avatar: MultipartBody.Part
     ): Response<AuthResponse>
 
 

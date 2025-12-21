@@ -1,11 +1,8 @@
 apply plugin: 'com.android.application'
 apply plugin: 'kotlin-android'
-apply plugin: 'com.google.devtools.ksp' // вместо устаревшего 'kotlin-kapt'
+apply plugin: 'com.google.devtools.ksp'
 apply plugin: 'com.google.gms.google-services'
 apply plugin: 'dagger.hilt.android.plugin'
-//apply plugin:  'kotlin-kapt'
-
-
 
 def secretProperties = new Properties()
 def secretPropertiesFile = rootProject.file('secret.properties')
@@ -16,16 +13,10 @@ if (secretPropertiesFile.exists()) {
 }
 
 def apiKey = secretProperties.getProperty('API_KEY', '')
-
-android {
-    defaultConfig {
-        buildConfigField "String", "API_KEY", "\"$apiKey\""
-    }
-}
+def mapkitApiKey = secretProperties.getProperty('MAPKIT_API_KEY', '')
 
 android {
     namespace "ru.netology.nmedia"
-
     compileSdkVersion 36
 
     defaultConfig {
@@ -35,10 +26,19 @@ android {
         versionCode 1
         versionName "1.0"
 
-
         // Используем API ключ из secret.properties
         buildConfigField "String", "API_KEY", "\"$apiKey\""
+
+        // API ключ для Yandex MapKit
+        buildConfigField "String", "MAPKIT_API_KEY", "\"$mapkitApiKey\""
+
         buildConfigField "String", "BASE_URL", '"http://94.228.125.136:8080/"'
+
+        // Для Yandex MapKit в манифест
+        manifestPlaceholders = [
+                usesCleartextTraffic: true,
+                yandexMapkitApiKey: mapkitApiKey
+        ]
     }
 
     compileOptions {
@@ -67,7 +67,6 @@ android {
         }
         debug {
             manifestPlaceholders.usesCleartextTraffic = true
-           // buildConfigField "String", "BASE_URL", '"http://10.0.2.2:9999"'
             buildConfigField "String", "BASE_URL", '"http://94.228.125.136:8080/"'
         }
     }
@@ -95,14 +94,11 @@ dependencies {
     def paging_version = "3.3.6"
     def play_services_base_version = "18.9.0"
     def core_desugaring_version = "2.1.5"
-
-
+    def yandex_mapkit_version = "4.4.0-lite"
+    def hilt_version = "2.57.2"
 
     implementation 'com.google.android.material:material:1.13.0'
-    // Для работы с файлами
     implementation 'commons-io:commons-io:2.21.0'
-
-    // Для работы с URI и файлами
     implementation 'androidx.documentfile:documentfile:1.1.0'
 
     implementation fileTree(dir: "libs", include: ["*.jar"])
@@ -138,4 +134,7 @@ dependencies {
     ksp "com.google.dagger:hilt-compiler:$hilt_version"
     implementation "androidx.paging:paging-runtime-ktx:$paging_version"
     coreLibraryDesugaring "com.android.tools:desugar_jdk_libs:$core_desugaring_version"
+
+    // Yandex MapKit
+    implementation "com.yandex.android:maps.mobile:$yandex_mapkit_version"
 }

@@ -1,22 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- Посты -->
     <item
-        android:id="@+id/feedFragment"
-        android:icon="@drawable/ic_netology_48dp"
-        android:title="Посты" />
+        android:id="@+id/postsFragment"
+        android:enabled="true"
+        android:icon="@drawable/ic_rss_feed_24"
+        android:title="@string/posts" />
 
-    <!-- События -->
     <item
         android:id="@+id/eventsFragment"
-        android:icon="@android:drawable/ic_dialog_info"
-        android:title="События" />
+        android:enabled="true"
+        android:icon="@drawable/ic_event_24"
+        android:title="@string/events" />
 
-    <!-- Пользователи -->
     <item
         android:id="@+id/usersFragment"
-        android:icon="@android:drawable/ic_dialog_dialer"
-        android:title="Пользователи" />
+        android:enabled="true"
+        android:icon="@drawable/ic_group_24"
+        android:title="@string/users" />
 
 </menu>

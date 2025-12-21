@@ -8,5 +8,14 @@ data class AuthResponse(
     val id: Long,
 
     @SerializedName("token")
-    val token: String
+    val token: String,
+
+    @SerializedName("login")
+    val login: String? = null,
+
+    @SerializedName("name")
+    val name: String? = null,
+
+    @SerializedName("avatar")
+    val avatar: String? = null
 )
