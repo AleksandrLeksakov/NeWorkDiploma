@@ -7,11 +7,11 @@ import ru.netology.nework.dao.event.EventRemoteKeyDao
 import ru.netology.nework.dao.post.PostDao
 import ru.netology.nework.dao.post.PostRemoteKeyDao
 import ru.netology.nework.dao.user.UserDao
-import ru.netology.nework.entity.EventEntity
+import ru.netology.nework.entity.event.EventEntity
 import ru.netology.nework.entity.event.EventRemoteKeyEntity
 import ru.netology.nework.entity.post.PostEntity
 import ru.netology.nework.entity.post.PostRemoteKeyEntity
-import ru.netology.nework.entity.UserEntity
+import ru.netology.nework.entity.user.UserEntity
 
 @Database(
     entities = [

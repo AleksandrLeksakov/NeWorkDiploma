@@ -20,7 +20,6 @@ import dagger.hilt.android.AndroidEntryPoint
 import ru.netology.nework.R
 import ru.netology.nework.databinding.FragmentNewPostBinding
 import ru.netology.nework.util.AndroidUtils
-import ru.netology.nework.util.StringArg
 import ru.netology.nework.viewmodel.PostViewModel
 
 @AndroidEntryPoint

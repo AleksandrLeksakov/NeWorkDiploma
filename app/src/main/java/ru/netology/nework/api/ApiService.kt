@@ -7,67 +7,86 @@ import ru.netology.nework.dto.*
 
 interface ApiService {
     // ========== AUTHENTICATION & REGISTRATION ==========
-    @POST("api/users/authentication")
-    suspend fun auth(
-        @Query("login") login: String,
-        @Query("pass") pass: String
-    ): Response<AuthResponse>
-
+    @FormUrlEncoded
+    @POST("api/users/registration")
+    suspend fun usersRegistration(
+        @Field("login") login: String,
+        @Field("pass") pass: String,
+        @Field("name") name: String
+    ): Response<Token>
 
     @Multipart
     @POST("api/users/registration")
-    suspend fun register(
+    suspend fun usersRegistrationWithPhoto(
         @Query("login") login: String,
         @Query("pass") pass: String,
         @Query("name") name: String,
-        @Part avatar: MultipartBody.Part
-    ): Response<AuthResponse>
+        @Part file: MultipartBody.Part
+    ): Response<Token>
+
+    @FormUrlEncoded
+    @POST("api/users/authentication")
+    suspend fun usersAuthentication(
+        @Field("login") login: String,
+        @Field("pass") pass: String
+    ): Response<Token>
+
+    @GET("api/users")
+    suspend fun usersGetAllUser(): Response<List<UserResponse>>
+
+    @GET("api/users/{id}")
+    suspend fun usersGetUser(
+        @Path("id") id: Long,
+    ): Response<UserResponse>
 
 
 
     // ========== POSTS ==========
     @GET("api/posts")
-    suspend fun getAllPosts(
-        @Query("latest") latest: Long? = null,
-        @Query("count") count: Int? = null
-    ): Response<List<Post>>
-
-    @GET("api/posts/{id}")
-    suspend fun getPostById(@Path("id") id: Long): Response<Post>
+    suspend fun postsGetAllPost(): Response<List<Post>>
 
     @POST("api/posts")
-    suspend fun save(@Body post: Post): Response<Post>
-
-    @POST("api/posts/{id}")
-    suspend fun updatePost(@Path("id") id: Long, @Body post: Post): Response<Post>
-
-    @DELETE("api/posts/{id}")
-    suspend fun removeById(@Path("id") id: Long): Response<Unit>
+    suspend fun postsSavePost(
+        @Body post: Post,
+    ): Response<Post>
 
     @POST("api/posts/{id}/likes")
-    suspend fun likeById(@Path("id") id: Long): Response<Post>
+    suspend fun postsLikePost(
+        @Path("id") id: Long,
+    ): Response<Post>
 
     @DELETE("api/posts/{id}/likes")
-    suspend fun unlikeById(@Path("id") id: Long): Response<Post>
-
-    @POST("api/posts/{id}/shares")
-    suspend fun shareById(@Path("id") id: Long): Response<Post>
-
-    // Для пагинации (старый вариант - можно оставить для совместимости)
-    @GET("api/posts/latest")
-    suspend fun getLatest(@Query("count") count: Int): Response<List<Post>>
-
-    @GET("api/posts/{id}/after")
-    suspend fun getAfter(
+    suspend fun postsUnLikePost(
         @Path("id") id: Long,
-        @Query("count") count: Int
-    ): Response<List<Post>>
+    ): Response<Post>
+
+    @GET("api/posts/{id}/newer")
+    suspend fun postsGetNewerPost(@Path("id") id: Long): Response<List<Post>>
 
     @GET("api/posts/{id}/before")
-    suspend fun getBefore(
+    suspend fun postsGetBeforePost(
         @Path("id") id: Long,
         @Query("count") count: Int
     ): Response<List<Post>>
+
+    @GET("api/posts/{id}/after")
+    suspend fun postsGetAfterPost(
+        @Path("id") id: Long,
+        @Query("count") count: Int
+    ): Response<List<Post>>
+
+    @GET("api/post/{id}")
+    suspend fun postsGetPost(
+        @Path("id") id: Long,
+    ): Response<Post>
+
+    @DELETE("api/posts/{id}")
+    suspend fun postsDeletePost(
+        @Path("id") id: Long,
+    ): Response<Unit>
+
+    @GET("api/posts/latest")
+    suspend fun postsGetLatestPage(@Query("count") count: Int): Response<List<Post>>
 
     // ========== EVENTS ==========
     @GET("api/events")
@@ -160,5 +179,5 @@ interface ApiService {
 
     // ========== PUSH TOKENS ==========
     @POST("api/users/push-tokens")
-    suspend fun sendPushToken(@Body token: PushToken): Response<Unit>
+    suspend fun sendPushToken(@Body token: Token): Response<Unit>
 }

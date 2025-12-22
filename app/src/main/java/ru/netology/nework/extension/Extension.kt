@@ -1,4 +1,4 @@
-package ru.netology.nework.extensions
+package ru.netology.nework.extension
 
 import android.widget.ImageView
 import com.bumptech.glide.Glide

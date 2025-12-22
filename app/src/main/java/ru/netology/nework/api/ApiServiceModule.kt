@@ -1,81 +1,79 @@
 package ru.netology.nework.api
 
-import android.util.Log
+import com.google.gson.GsonBuilder
+import com.google.gson.TypeAdapter
+import com.google.gson.stream.JsonReader
+import com.google.gson.stream.JsonWriter
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import okhttp3.OkHttpClient
-import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
+import retrofit2.create
 import ru.netology.nework.BuildConfig
 import ru.netology.nework.auth.AppAuth
-import java.util.concurrent.TimeUnit
+import java.time.Instant
+import java.time.OffsetDateTime
+import java.time.ZoneId
 import javax.inject.Singleton
 
 @InstallIn(SingletonComponent::class)
 @Module
 class ApiServiceModule {
+    companion object {
+        private const val BASE_URL = "http://94.228.125.136:8080/"
+    }
 
     @Singleton
     @Provides
-    fun provideOkHttpClient(
-        loggingInterceptor: HttpLoggingInterceptor,
-        apiKeyInterceptor: ApiKeyInterceptor,
-        authInterceptor: AuthInterceptor
+    fun provideOkHttp(
+        appAuth: AppAuth
     ): OkHttpClient = OkHttpClient.Builder()
-        .addInterceptor(loggingInterceptor)
-        .addInterceptor(apiKeyInterceptor)
-        .addInterceptor(authInterceptor)
-        .connectTimeout(30, TimeUnit.SECONDS)
-        .readTimeout(30, TimeUnit.SECONDS)
-        .writeTimeout(30, TimeUnit.SECONDS)
+        .addInterceptor { chain ->
+            appAuth.authState.value.token?.let { token->
+                val request = chain.request().newBuilder()
+                    .addHeader("Authorization", token)
+                    .addHeader("Api-Key", BuildConfig.API_KEY)
+                    .build()
+                return@addInterceptor chain.proceed(request)
+            }
+            val request = chain.request().newBuilder()
+                .addHeader("Api-Key", BuildConfig.API_KEY)
+                .build()
+            chain.proceed(request)
+        }
         .build()
 
+    @Singleton
+    @Provides
+    fun provideRetrofit(
+        okHttpClient: OkHttpClient
+    ): Retrofit = Retrofit.Builder()
+        .addConverterFactory(
+            GsonConverterFactory.create(
+                GsonBuilder().registerTypeAdapter(
+                    OffsetDateTime::class.java,
+                    object : TypeAdapter<OffsetDateTime>() {
+                        override fun write(out: JsonWriter?, value: OffsetDateTime?) {
+                            out?.value(value?.toEpochSecond())
+                        }
 
-    @Singleton
-    @Provides
-    fun provideLoggingInterceptor(): HttpLoggingInterceptor =
-        HttpLoggingInterceptor(object : HttpLoggingInterceptor.Logger {
-            override fun log(message: String) {
-                // Фильтруем и форматируем логи
-                when {
-                    message.startsWith("-->") -> Log.d("OkHttp", "🚀 REQUEST: $message")
-                    message.startsWith("<--") -> Log.d("OkHttp", "📥 RESPONSE: $message")
-                    message.startsWith("{") || message.startsWith("[") -> {
-                        // Красиво форматируем JSON
-                        Log.d("OkHttp", "📄 BODY: $message")
-                    }
-                    else -> Log.d("OkHttp", message)
-                }
-            }
-        }).apply {
-            if (BuildConfig.DEBUG) {
-                level = HttpLoggingInterceptor.Level.BODY
-            } else {
-                level = HttpLoggingInterceptor.Level.NONE
-            }
-        }
-    @Singleton
-    @Provides
-    fun provideApiKeyInterceptor(): ApiKeyInterceptor = ApiKeyInterceptor()
-
-    @Singleton
-    @Provides
-    fun provideAuthInterceptor(appAuth: AppAuth): AuthInterceptor =
-        AuthInterceptor(appAuth)
-
-    @Singleton
-    @Provides
-    fun provideRetrofit(okHttpClient: OkHttpClient): Retrofit = Retrofit.Builder()
-        .addConverterFactory(GsonConverterFactory.create())
-        .baseUrl(BuildConfig.BASE_URL)
+                        override fun read(jsonReader: JsonReader): OffsetDateTime {
+                            return OffsetDateTime.ofInstant(
+                                Instant.parse(jsonReader.nextString()),
+                                ZoneId.systemDefault()
+                            )
+                        }
+                    }).create()
+            )
+        )
+        .baseUrl(BASE_URL)
         .client(okHttpClient)
         .build()
 
     @Singleton
     @Provides
-    fun provideApiService(retrofit: Retrofit): ApiService =
-        retrofit.create(ApiService::class.java)
+    fun provideApiService(retrofit: Retrofit): ApiService = retrofit.create()
 }

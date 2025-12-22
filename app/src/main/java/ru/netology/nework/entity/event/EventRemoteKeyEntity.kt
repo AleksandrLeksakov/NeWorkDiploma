@@ -2,7 +2,6 @@ package ru.netology.nework.entity.event
 
 import androidx.room.ColumnInfo
 import androidx.room.Entity
-import ru.netology.nework.dto.RemoteKeyType
 
 @Entity(
     tableName = "events_remote_keys",

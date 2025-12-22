@@ -1,20 +1,9 @@
 package ru.netology.nework.dto
 
-import com.google.gson.annotations.SerializedName
-
 data class UserResponse(
-    @SerializedName("id")
-    val id: Long,
-
-    @SerializedName("login")
+    override val id: Long,
     val login: String,
-
-    @SerializedName("name")
     val name: String,
-
-    @SerializedName("avatar")
     val avatar: String? = null,
-
-    @SerializedName("token")
-    val token: String? = null,
-)
+    val selected: Boolean = false
+): FeedItem

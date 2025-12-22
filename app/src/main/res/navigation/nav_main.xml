@@ -35,7 +35,7 @@
     </fragment>
     <fragment
         android:id="@+id/loginFragment"
-        android:name="ru.netology.nework.fragment.authorisation.LoginFragment"
+        android:name="ru.netology.nework.fragments.authorisation.LoginFragment"
         android:label="fragment_login"
         tools:layout="@layout/fragment_login" >
         <action
@@ -46,7 +46,7 @@
     </fragment>
     <fragment
         android:id="@+id/registerFragment"
-        android:name="ru.netology.nework.fragment.authorisation.RegisterFragment"
+        android:name="ru.netology.nework.fragments.authorisation.RegisterFragment"
         android:label="fragment_register"
         tools:layout="@layout/fragment_register" />
     <fragment

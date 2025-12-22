@@ -7,7 +7,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import ru.netology.nework.api.ApiService
-import ru.netology.nework.dto.PushToken
 import javax.inject.Inject
 
 @AndroidEntryPoint
