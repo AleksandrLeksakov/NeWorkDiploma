@@ -11,7 +11,7 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.asRequestBody
 import ru.netology.nework.api.ApiService
-import ru.netology.nework.dao.PostDao
+import ru.netology.nework.dao.post.PostDao
 import ru.netology.nework.db.AppDb
 import ru.netology.nework.dto.Media
 import ru.netology.nework.dto.MediaUpload

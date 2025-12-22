@@ -1,9 +1,11 @@
-package ru.netology.nework.dao
+package ru.netology.nework.dao.post
 
 import androidx.paging.PagingSource
-import androidx.room.*
+import androidx.room.Dao
+import androidx.room.Insert
+import androidx.room.OnConflictStrategy
+import androidx.room.Query
 import kotlinx.coroutines.flow.Flow
-import ru.netology.nework.entity.PostEntity
 
 @Dao
 interface PostDao {
@@ -16,10 +18,10 @@ interface PostDao {
     @Query("SELECT COUNT(*) FROM posts WHERE id > :id")
     suspend fun getNewerCount(id: Long): Int
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Insert(onConflict = OnConflictStrategy.Companion.REPLACE)
     suspend fun insert(post: PostEntity)
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Insert(onConflict = OnConflictStrategy.Companion.REPLACE)
     suspend fun insert(posts: List<PostEntity>)
 
     @Query("DELETE FROM posts WHERE id = :id")
