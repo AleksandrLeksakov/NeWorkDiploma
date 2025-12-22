@@ -1,4 +1,4 @@
-package ru.netology.nework.entity
+package ru.netology.nework.entity.post
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey

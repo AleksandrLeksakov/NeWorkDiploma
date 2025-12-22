@@ -9,7 +9,7 @@ import retrofit2.HttpException
 import ru.netology.nework.api.ApiService
 import ru.netology.nework.db.AppDb
 import ru.netology.nework.entity.PostEntity
-import ru.netology.nework.entity.PostRemoteKeyEntity
+import ru.netology.nework.entity.post.PostRemoteKeyEntity
 import java.io.IOException
 
 @OptIn(ExperimentalPagingApi::class)

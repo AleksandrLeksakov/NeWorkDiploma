@@ -1,8 +1,4 @@
-package ru.netology.nework.entity
-
-import androidx.room.Entity
-import androidx.room.PrimaryKey
-import ru.netology.nework.enumeration.EventType
+package ru.netology.nework.entity.event
 
 @Entity
 data class EventEntity(

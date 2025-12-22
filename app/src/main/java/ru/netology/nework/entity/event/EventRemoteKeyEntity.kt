@@ -1,4 +1,4 @@
-package ru.netology.nework.entity
+package ru.netology.nework.entity.event
 
 import androidx.room.ColumnInfo
 import androidx.room.Entity
