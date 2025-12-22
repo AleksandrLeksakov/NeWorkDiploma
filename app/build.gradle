@@ -16,11 +16,11 @@ def apiKey = secretProperties.getProperty('API_KEY', '')
 def mapkitApiKey = secretProperties.getProperty('MAPKIT_API_KEY', '')
 
 android {
-    namespace "ru.netology.nmedia"
+    namespace "ru.netology.nework"
     compileSdkVersion 36
 
     defaultConfig {
-        applicationId "ru.netology.nmedia"
+        applicationId "ru.netology.nework"
         minSdkVersion 23
         targetSdkVersion 36
         versionCode 1
@@ -94,6 +94,7 @@ dependencies {
     def paging_version = "3.3.6"
     def play_services_base_version = "18.9.0"
     def core_desugaring_version = "2.1.5"
+    def exoPlayerVersion = "1.2.1"
     def yandex_mapkit_version = "4.4.0-lite"
     def hilt_version = "2.57.2"
 
@@ -134,7 +135,9 @@ dependencies {
     ksp "com.google.dagger:hilt-compiler:$hilt_version"
     implementation "androidx.paging:paging-runtime-ktx:$paging_version"
     coreLibraryDesugaring "com.android.tools:desugar_jdk_libs:$core_desugaring_version"
-
+    implementation("androidx.media3:media3-exoplayer:$exoPlayerVersion")
+    implementation("androidx.media3:media3-exoplayer-dash:$exoPlayerVersion")
+    implementation("androidx.media3:media3-ui:$exoPlayerVersion")
     // Yandex MapKit
     implementation "com.yandex.android:maps.mobile:$yandex_mapkit_version"
 }
