@@ -1,4 +1,4 @@
-package ru.netology.nework.service
+/*package ru.netology.nework.service
 
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
@@ -36,4 +36,4 @@ class FCMService : FirebaseMessagingService() {
             // Показать уведомление
         }
     }
-}
+}*/

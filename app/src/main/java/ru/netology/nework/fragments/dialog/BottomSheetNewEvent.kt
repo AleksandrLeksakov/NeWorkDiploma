@@ -1,4 +1,4 @@
-package ru.netology.nework.fragment.dialog
+package ru.netology.nework.fragments.dialog
 
 import android.os.Bundle
 import android.view.LayoutInflater

@@ -1,4 +1,4 @@
-package ru.netology.nework.fragment.item
+package ru.netology.nework.fragments.item
 
 import android.os.Bundle
 import androidx.fragment.app.Fragment

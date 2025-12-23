@@ -1,15 +1,12 @@
 package ru.netology.nework.entity.event
 
-import androidx.room.ColumnInfo
 import androidx.room.Entity
+import androidx.room.PrimaryKey
+import ru.netology.nework.entity.KeyType
 
-@Entity(
-    tableName = "events_remote_keys",
-    primaryKeys = ["type", "event_id"]
-)
+@Entity
 data class EventRemoteKeyEntity(
-    @ColumnInfo(name = "type")
-    val type: RemoteKeyType,
-    @ColumnInfo(name = "event_id")
-    val eventId: Long
+    @PrimaryKey
+    val type: KeyType,
+    val id: Long
 )

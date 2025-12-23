@@ -1,4 +1,4 @@
-package ru.netology.nework.fragment.newitem
+package ru.netology.nework.fragments.newitem
 
 import android.os.Bundle
 import android.view.LayoutInflater

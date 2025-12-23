@@ -1,4 +1,4 @@
-package ru.netology.nework.fragment.item
+package ru.netology.nework.fragments.item
 
 import android.graphics.PointF
 import android.os.Bundle
@@ -15,6 +15,7 @@ import com.yandex.mapkit.geometry.Point
 import com.yandex.mapkit.layers.ObjectEvent
 import com.yandex.mapkit.map.CameraPosition
 import com.yandex.mapkit.map.InputListener
+import com.yandex.mapkit.map.Map
 import com.yandex.mapkit.map.PlacemarkMapObject
 import com.yandex.mapkit.mapview.MapView
 import com.yandex.mapkit.user_location.UserLocationLayer
@@ -48,8 +49,8 @@ class MapsFragment : Fragment(), UserLocationObjectListener {
         val imageProvider =
             ImageProvider.fromResource(requireContext(), R.drawable.ic_location_on_24)
         val inputListener = object : InputListener {
-            override fun onMapTap(map: com.yandex.mapkit.map.Map, point: Point) = Unit
-            override fun onMapLongTap(map: com.yandex.mapkit.map.Map, point: Point) {
+            override fun onMapTap(map: Map, point: Point) = Unit
+            override fun onMapLongTap(map: Map, point: Point) {
                 if (placeMark == null) {
                     placeMark = binding.map.mapWindow.map.mapObjects.addPlacemark()
                 }

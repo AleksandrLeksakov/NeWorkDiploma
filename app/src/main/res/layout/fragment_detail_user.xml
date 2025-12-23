@@ -5,7 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     app:layoutDescription="@xml/fragment_detail_user_scene"
-    tools:context=".fragment.detailitem.DetailUserFragment">
+    tools:context=".fragments.detailitem.DetailUserFragment">
 
     <com.google.android.material.appbar.MaterialToolbar
         android:id="@+id/topAppBar"

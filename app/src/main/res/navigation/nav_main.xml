@@ -7,7 +7,7 @@
 
     <fragment
         android:id="@+id/mainFragment"
-        android:name="ru.netology.nework.fragment.MainFragment"
+        android:name="ru.netology.nework.fragments.main.MainFragment"
         android:label="fragment_main"
         tools:layout="@layout/fragment_main" >
         <action
@@ -51,7 +51,7 @@
         tools:layout="@layout/fragment_register" />
     <fragment
         android:id="@+id/detailUserFragment"
-        android:name="ru.netology.nework.fragment.detailitem.DetailUserFragment"
+        android:name="ru.netology.nework.fragments.detailitem.DetailUserFragment"
         android:label="fragment_detail_user"
         tools:layout="@layout/fragment_detail_user" >
         <action
@@ -60,7 +60,7 @@
     </fragment>
     <fragment
         android:id="@+id/newPostFragment"
-        android:name="ru.netology.nework.fragment.newitem.NewPostFragment"
+        android:name="ru.netology.nework.fragments.newitem.NewPostFragment"
         android:label="fragment_new_post"
         tools:layout="@layout/fragment_new_post" >
         <action
@@ -72,17 +72,17 @@
     </fragment>
     <fragment
         android:id="@+id/mapsFragment"
-        android:name="ru.netology.nework.fragment.item.MapsFragment"
+        android:name="ru.netology.nework.fragments.item.MapsFragment"
         android:label="fragment_maps"
         tools:layout="@layout/fragment_maps" />
     <fragment
         android:id="@+id/usersFragment2"
-        android:name="ru.netology.nework.fragment.item.UsersFragment"
+        android:name="ru.netology.nework.fragments.item.UsersFragment"
         android:label="fragment_users"
         tools:layout="@layout/fragment_users" />
     <fragment
         android:id="@+id/newEventFragment"
-        android:name="ru.netology.nework.fragment.newitem.NewEventFragment"
+        android:name="ru.netology.nework.fragments.newitem.NewEventFragment"
         android:label="fragment_new_event"
         tools:layout="@layout/fragment_new_event" >
         <action
@@ -94,17 +94,17 @@
     </fragment>
     <fragment
         android:id="@+id/newJobFragment"
-        android:name="ru.netology.nework.fragment.newitem.NewJobFragment"
+        android:name="ru.netology.nework.fragments.newitem.NewJobFragment"
         android:label="fragment_new_job"
         tools:layout="@layout/fragment_new_job" />
     <fragment
         android:id="@+id/detailPostFragment"
-        android:name="ru.netology.nework.fragment.detailitem.DetailPostFragment"
+        android:name="ru.netology.nework.fragments.detailitem.DetailPostFragment"
         android:label="fragment_detail_post"
         tools:layout="@layout/fragment_detail_post" />
     <fragment
         android:id="@+id/detailEventFragment"
-        android:name="ru.netology.nework.fragment.detailitem.DetailEventFragment"
+        android:name="ru.netology.nework.fragments.detailitem.DetailEventFragment"
         android:label="fragment_detail_event"
         tools:layout="@layout/fragment_detail_event" />
 </navigation>

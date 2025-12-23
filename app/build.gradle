@@ -1,7 +1,7 @@
 apply plugin: 'com.android.application'
 apply plugin: 'kotlin-android'
 apply plugin: 'com.google.devtools.ksp'
-apply plugin: 'com.google.gms.google-services'
+//apply plugin: 'com.google.gms.google-services'
 apply plugin: 'dagger.hilt.android.plugin'
 
 def secretProperties = new Properties()
@@ -120,8 +120,8 @@ dependencies {
     ksp "androidx.room:room-compiler:$room_version"
     implementation "androidx.room:room-ktx:$room_version"
     implementation "androidx.room:room-paging:$room_version"
-    implementation platform("com.google.firebase:firebase-bom:$firebase_version")
-    implementation "com.google.firebase:firebase-messaging"
+   // implementation platform("com.google.firebase:firebase-bom:$firebase_version")
+    //implementation "com.google.firebase:firebase-messaging"
     implementation "com.google.android.gms:play-services-base:$play_services_base_version"
     implementation "com.squareup.retrofit2:retrofit:$retrofit_version"
     implementation "com.squareup.retrofit2:converter-gson:$retrofitgson_version"

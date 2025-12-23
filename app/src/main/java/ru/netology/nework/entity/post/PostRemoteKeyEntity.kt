@@ -2,10 +2,11 @@ package ru.netology.nework.entity.post
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import ru.netology.nework.entity.KeyType
 
-@Entity(tableName = "PostRemoteKeyEntity")
+@Entity(tableName = "postKey")
 data class PostRemoteKeyEntity(
     @PrimaryKey
-    val id: Long,
-    val nextKey: Long?
+    val type: KeyType,
+    val id: Long
 )

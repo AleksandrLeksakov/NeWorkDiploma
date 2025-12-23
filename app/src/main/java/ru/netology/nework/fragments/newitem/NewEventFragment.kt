@@ -1,4 +1,4 @@
-package ru.netology.nework.fragment.newitem
+package ru.netology.nework.fragments.newitem
 
 import android.app.Activity
 import android.os.Bundle
@@ -27,10 +27,11 @@ import ru.netology.nework.R
 import ru.netology.nework.databinding.FragmentNewEventBinding
 import ru.netology.nework.dto.AttachmentType
 import ru.netology.nework.extension.loadAttachment
-import ru.netology.nework.fragment.dialog.BottomSheetNewEvent
+import ru.netology.nework.fragments.dialog.BottomSheetNewEvent
 import ru.netology.nework.util.AndroidUtils.focusAndShowKeyboard
 import ru.netology.nework.util.AppConst
 import ru.netology.nework.viewmodel.EventViewModel
+import kotlin.toString
 
 class NewEventFragment : Fragment() {
     private val eventViewModel: EventViewModel by activityViewModels()
