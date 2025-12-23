@@ -9,7 +9,7 @@ import ru.netology.nework.api.ApiService
 import ru.netology.nework.dao.event.EventDao
 import ru.netology.nework.dao.event.EventRemoteKeyDao
 import ru.netology.nework.db.AppDb
-import ru.netology.nework.entity.KeyType
+import ru.netology.nework.entity.keytype.KeyType
 import ru.netology.nework.entity.event.EventEntity
 import ru.netology.nework.entity.event.EventRemoteKeyEntity
 import ru.netology.nework.entity.event.toEntity

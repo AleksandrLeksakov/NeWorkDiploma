@@ -2,7 +2,7 @@ package ru.netology.nework.entity.event
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
-import ru.netology.nework.entity.KeyType
+import ru.netology.nework.entity.keytype.KeyType
 
 @Entity
 data class EventRemoteKeyEntity(

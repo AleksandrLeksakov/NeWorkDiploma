@@ -9,7 +9,7 @@ import ru.netology.nework.api.ApiService
 import ru.netology.nework.dao.post.PostDao
 import ru.netology.nework.dao.post.PostRemoteKeyDao
 import ru.netology.nework.db.AppDb
-import ru.netology.nework.entity.KeyType
+import ru.netology.nework.entity.keytype.KeyType
 import ru.netology.nework.entity.post.PostEntity
 import ru.netology.nework.entity.post.PostRemoteKeyEntity
 import ru.netology.nework.entity.post.toEntity

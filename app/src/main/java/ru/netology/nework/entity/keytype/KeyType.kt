@@ -1,4 +1,4 @@
-package ru.netology.nework.entity
+package ru.netology.nework.entity.keytype
 
 enum class KeyType {
     AFTER,
