@@ -94,7 +94,7 @@ dependencies {
     def paging_version = "3.3.6"
     def play_services_base_version = "18.9.0"
     def core_desugaring_version = "2.1.5"
-    def exoPlayerVersion = "1.2.1"
+    def exoPlayerVersion = "1.9.0"
     def yandex_mapkit_version = "4.4.0-lite"
     def hilt_version = "2.57.2"
 

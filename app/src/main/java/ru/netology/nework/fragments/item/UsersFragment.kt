@@ -88,8 +88,8 @@ class UsersFragment : Fragment() {
             }
 
             override fun openCard(feedItem: FeedItem) {
-                parentNavController?.navigate(
-                    R.id.action_mainFragment_to_detailUserFragment,
+                findNavController().navigate(
+                    R.id.detailUserFragment,
                     bundleOf(AppConst.USER_ID to feedItem.id)
                 )
             }

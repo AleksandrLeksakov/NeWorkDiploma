@@ -14,6 +14,7 @@ import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.navigation.fragment.findNavController
 import com.google.gson.Gson
+import com.yandex.mapkit.MapKitFactory
 import com.yandex.mapkit.geometry.Point
 import com.yandex.mapkit.map.CameraPosition
 import com.yandex.mapkit.map.PlacemarkMapObject
@@ -76,6 +77,8 @@ class DetailPostFragment : Fragment() {
             addItemDecoration(avatarDecoration)
             adapter = mentionedAdapter
         }
+
+        MapKitFactory.initialize(requireContext())
 
         val imageProvider =
             ImageProvider.fromResource(requireContext(), R.drawable.ic_location_on_24)
