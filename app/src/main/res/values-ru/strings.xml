@@ -7,7 +7,7 @@
     <string name="button_new_post">новый пост</string>
     <string name="button_new_event">новое мероприятие</string>
     <string name="author_avatar_image">аватар автора</string>
-    <string name="text_post">Привет, друзья! Хочу поделиться с вами своими мыслями о том, что для меня означает быть профессиональным писателем. Эта профессия - это не только способ заработка, но и настоящее призвание, к которому я стремился многие годы. Каждый новый текст - это возможность выразить свои мысли, эмоции и вдохнуть жизнь в созданных персонажей. Я готов обмениваться опытом и учиться у талантливых коллег, искренне благодарен всем моим читателям за поддержку и вдохновение!</string>
+    <string name="text_post">Привет Медвед</string>
     <string name="image_content">изображение</string>
     <string name="button_like">нравится</string>
     <string name="button_share">поделиться</string>
@@ -58,10 +58,10 @@
     <string name="end_date">Дата окончания</string>
     <string name="button_new_job">Новая вакансия</string>
     <string name="whats_is_event">Что за мероприятие?</string>
-    <string name="button_add_photo">кнопка добавить фото</string>
-    <string name="button_add_file">кнопка добавить файл</string>
-    <string name="button_add_user">кнопка добавить пользователя</string>
-    <string name="button_add_location">кнопка добавить место</string>
+    <string name="button_add_photo">добавить фото</string>
+    <string name="button_add_file">добавить файл</string>
+    <string name="button_add_user">добавить пользователя</string>
+    <string name="button_add_location">добавить место</string>
     <string name="position">Должность</string>
     <string name="link">Ссылка</string>
     <string name="date_start">дата начала</string>
