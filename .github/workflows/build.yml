@@ -1,4 +1,4 @@
-name: CI
+name: Android CI
 
 on:
   push:
@@ -9,23 +9,65 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
+      # 1. Получаем код из репозитория
       - uses: actions/checkout@v4
 
+      # 2. Настраиваем Java
       - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '21'
 
+      # 3. СОЗДАЕМ secret.properties из секретов GitHub
+      - name: Create secret.properties from GitHub Secrets
+        run: |
+          echo "=== Создаем secret.properties ==="
+          echo "API_KEY=${{ secrets.API_KEY }}" > secret.properties
+          echo "MAPKIT_API_KEY=${{ secrets.MAPKIT_API_KEY }}" >> secret.properties
+          
+          echo "=== Проверяем созданный файл ==="
+          ls -la secret.properties
+          echo "--- Содержимое (первые 20 символов каждого ключа) ---"
+          echo "API_KEY: $(head -1 secret.properties | cut -c 1-20)..."
+          echo "MAPKIT_API_KEY: $(tail -1 secret.properties | cut -c 1-20)..."
+          echo "--- Полная длина ключей ---"
+          echo "API_KEY длина: ${#API_KEY}"
+          echo "MAPKIT_API_KEY длина: ${#MAPKIT_API_KEY}"
+
+      # 4. Делаем gradlew исполняемым
       - name: Make gradlew executable
         run: chmod +x ./gradlew
 
+      # 5. Собираем проект
       - name: Build with Gradle
-        run: ./gradlew assembleDebug
+        run: ./gradlew assembleDebug --stacktrace
 
-      - name: Upload a Build Artifact
+      # 6. Загружаем APK как артефакт
+      - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: my-build-artifact
           path: app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 7
+
+      # 7. (Опционально) Проверяем наличие ключей в APK
+      - name: Verify keys in APK
+        run: |
+          echo "=== Проверяем APK ==="
+          if [ -f app/build/outputs/apk/debug/app-debug.apk ]; then
+            echo "APK найден, размер: $(ls -lh app/build/outputs/apk/debug/app-debug.apk | awk '{print $5}')"
+          
+            # Извлекаем и проверяем BuildConfig
+            unzip -q app/build/outputs/apk/debug/app-debug.apk classes.dex -d temp_apk/
+            if command -v strings &> /dev/null; then
+              echo "--- Поиск ключей в APK ---"
+              strings temp_apk/classes.dex | grep -i "api_key\|mapkit" | head -5
+            fi
+            rm -rf temp_apk/
+          else
+            echo "ОШИБКА: APK не найден!"
+            exit 1
+          fi
