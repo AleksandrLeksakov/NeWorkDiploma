@@ -79,13 +79,22 @@ class PostsFragment : Fragment() {
 
             override fun openCard(feedItem: FeedItem) {
                 postViewModel.openPost(feedItem as Post)
-                parentNavController?.navigate(R.id.action_mainFragment_to_detailPostFragment)
+
+                val navController = parentNavController ?: return
+
+                val actionId = when (navController.currentDestination?.id) {
+                    R.id.mainFragment -> R.id.action_mainFragment_to_detailPostFragment
+                    R.id.detailUserFragment -> R.id.action_detailUserFragment_to_detailPostFragment
+                    else -> R.id.action_mainFragment_to_detailPostFragment
+                }
+
+                navController.navigate(actionId)
             }
         })
 
-        binding.recyclerViewPost.adapter = postAdapter // ← НЕ УДАЛЯЙТЕ ЭТУ СТРОКУ!
+        binding.recyclerViewPost.adapter = postAdapter
 
-        // ============ ИЗМЕНЕННЫЙ БЛОК ============
+
         if (userId != null) {
             // ЗАГРУЗКА СТЕНЫ ПОЛЬЗОВАТЕЛЯ
             postViewModel.loadUserWall(userId)
@@ -109,7 +118,6 @@ class PostsFragment : Fragment() {
                 }
             }
         }
-        // =========================================
 
         viewLifecycleOwner.lifecycleScope.launch {
             postAdapter.loadStateFlow.collectLatest {
