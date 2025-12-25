@@ -27,18 +27,18 @@ class MainActivity : AppCompatActivity() {
                     Manifest.permission.ACCESS_FINE_LOCATION,
                     false
                 ) -> {
-                    // Precise location access granted.
+                    // Доступ к точному местоположению
                 }
 
                 permissions.getOrDefault(
                     Manifest.permission.ACCESS_COARSE_LOCATION,
                     false
                 ) -> {
-                    // Only approximate location access granted.
+                    //  к приблизительному местоположению
                 }
 
                 else -> {
-                    // No location access granted.
+                    // Доступ к местоположению не предоставляется
                 }
             }
         }.launch(

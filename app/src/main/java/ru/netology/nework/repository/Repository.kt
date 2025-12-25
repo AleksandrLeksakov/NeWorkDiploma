@@ -33,7 +33,6 @@ interface Repository {
     suspend fun savePost(post: Post)
     suspend fun savePostWithAttachment(post: Post, attachmentModel: AttachmentModel)
     suspend fun deletePost(id: Long)
-
     suspend fun saveEvent(event: Event)
     suspend fun saveEventWithAttachment(event: Event, attachmentModel: AttachmentModel)
     suspend fun deleteEvent(id: Long)
@@ -43,4 +42,5 @@ interface Repository {
     suspend fun getJobs(userId: Long)
     suspend fun saveJob(job: Job)
     suspend fun deleteJob(id: Long)
+    suspend fun getUserWall(userId: Long): List<Post>
 }

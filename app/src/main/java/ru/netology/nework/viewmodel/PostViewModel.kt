@@ -196,4 +196,16 @@ class PostViewModel @Inject constructor(
         involvedData.value = InvolvedItemModel()
     }
 
+    private val _userWall = MutableLiveData<List<Post>>()
+    val userWall: LiveData<List<Post>> = _userWall
+
+    fun loadUserWall(userId: Long) = viewModelScope.launch {
+        try {
+            _userWall.value = repository.getUserWall(userId)
+        } catch (e: Exception) {
+            // Обработка ошибки
+            e.printStackTrace()
+            _userWall.value = emptyList() // или null
+        }
+    }
 }

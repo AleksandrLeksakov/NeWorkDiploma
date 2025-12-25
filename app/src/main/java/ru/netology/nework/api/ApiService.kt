@@ -22,99 +22,6 @@ import ru.netology.nework.dto.UserResponse
 
 interface ApiService {
 
-    // Wall posts made by a single user
-    @POST("api/{authorId}/wall/{id}/likes")
-    suspend fun wallLikesPost(
-        @Path("authorId") authorId: Long,
-        @Path("id") id: String,
-    ): Response<Post>
-
-    @DELETE("api/{authorId}/wall/{id}/likes")
-    suspend fun wallUnLikesPost(
-        @Path("authorId") authorId: Long,
-        @Path("id") id: String,
-    ): Response<Post>
-
-    @GET("api/{authorId}/wall")
-    suspend fun wallGetAllPost(
-        @Path("authorId") authorId: Long,
-    ): Response<List<Post>>
-
-    @GET("api/{authorId}/wall/{id}/newer")
-    suspend fun wallGetNewer(
-        @Path("authorId") authorId: Long,
-        @Path("id") id: Long,
-    ): Response<List<Post>>
-
-    @GET("api/{authorId}/wall/{id}/before")
-    suspend fun wallGetBefore(
-        @Path("authorId") authorId: Long,
-        @Path("id") id: Long,
-        @Query("count") count: Long,
-    ): Response<List<Post>>
-
-    @GET("api/{authorId}/wall/{id}/after")
-    suspend fun wallGetAfter(
-        @Path("authorId") authorId: Long,
-        @Path("id") id: Long,
-        @Query("count") count: Long,
-    ): Response<List<Post>>
-
-    @GET("api/{authorId}/wall/{id}")
-    suspend fun wallGetPost(
-        @Path("authorId") authorId: Long,
-        @Path("id") id: Long,
-    ): Response<Post>
-
-    @GET("api/{authorId}/wall/latest")
-    suspend fun wallGetLatest(
-        @Path("authorId") authorId: Long,
-        @Query("count") count: Long,
-    ): Response<Post>
-
-
-    // MY messages on the WALL are filtered by the authorization token
-    @POST("api/my/wall/{id}/likes")
-    suspend fun myWallLikesPost(
-        @Path("id") id: String,
-    ): Response<Post>
-
-    @DELETE("api/my/wall/{id}/likes")
-    suspend fun myWallUnLikesPost(
-        @Path("id") id: String,
-    ): Response<Post>
-
-    @GET("api/my/wall")
-    suspend fun myWallGetAllPost(): Response<List<Post>>
-
-    @GET("api/my/wall/{id}/newer")
-    suspend fun myWallGetNewer(
-        @Path("id") id: Long,
-    ): Response<List<Post>>
-
-    @GET("api/my/wall/{id}/before")
-    suspend fun myWallGetBefore(
-        @Path("id") id: Long,
-        @Query("count") count: Long,
-    ): Response<List<Post>>
-
-    @GET("api/my/wall/{id}/after")
-    suspend fun myWallGetAfter(
-        @Path("id") id: Long,
-        @Query("count") count: Long,
-    ): Response<List<Post>>
-
-    @GET("api/my/wall/{id}")
-    suspend fun myWallGetPost(
-        @Path("id") id: Long,
-    ): Response<Post>
-
-    @GET("api/my/wall/latest")
-    suspend fun myWallGetLatest(
-        @Query("count") count: Long,
-    ): Response<Post>
-
-
     // USERS
     @FormUrlEncoded
     @POST("api/users/registration")
@@ -308,10 +215,16 @@ interface ApiService {
     suspend fun eventsGetLatestPageEvent(@Query("count") count: Int): Response<List<Event>>
 
 
-    ////////////////////////////////////// JOBS /////////////////////////////////////////////////
+   // JOBS
     @GET("api/{userId}/jobs")
     suspend fun jobsGetAllJob(
         @Path("userId") userId: Long,
     ): Response<List<Job>>
 
+    // Wall
+    //Посты одного юзера
+    @GET("api/{authorId}/wall")  // ← ЭТОТ!
+    suspend fun wallGetAllPost(
+        @Path("authorId") authorId: Long,
+    ): Response<List<Post>>
 }

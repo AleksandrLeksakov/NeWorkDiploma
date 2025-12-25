@@ -167,7 +167,7 @@ class EventViewHolder(
         }
     }
 
-    fun stopPlayer(){
+    fun stopPlayer() {
         player?.stop()
     }
 

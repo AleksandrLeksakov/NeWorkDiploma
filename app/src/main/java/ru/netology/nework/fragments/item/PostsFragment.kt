@@ -13,6 +13,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
 import androidx.paging.LoadState
+import androidx.paging.PagingData
 import androidx.paging.filter
 import com.google.android.material.snackbar.Snackbar
 import dagger.hilt.android.AndroidEntryPoint
@@ -82,20 +83,33 @@ class PostsFragment : Fragment() {
             }
         })
 
-        binding.recyclerViewPost.adapter = postAdapter
-        viewLifecycleOwner.lifecycleScope.launch {
-            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                postViewModel.data.collectLatest {
-                    if (userId != null) {
-                        postAdapter.submitData(it.filter { feedItem ->
-                            feedItem is Post && feedItem.authorId == userId
-                        })
-                    } else {
+        binding.recyclerViewPost.adapter = postAdapter // ← НЕ УДАЛЯЙТЕ ЭТУ СТРОКУ!
+
+        // ============ ИЗМЕНЕННЫЙ БЛОК ============
+        if (userId != null) {
+            // ЗАГРУЗКА СТЕНЫ ПОЛЬЗОВАТЕЛЯ
+            postViewModel.loadUserWall(userId)
+
+            // Наблюдаем за результатом
+            postViewModel.userWall.observe(viewLifecycleOwner) { wallPosts ->
+                if (wallPosts != null) {
+                    viewLifecycleOwner.lifecycleScope.launch {
+                        // Преобразуем List в PagingData
+                        postAdapter.submitData(PagingData.from(wallPosts))
+                    }
+                }
+            }
+        } else {
+            // ОБЩАЯ ЛЕНТА
+            viewLifecycleOwner.lifecycleScope.launch {
+                viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                    postViewModel.data.collectLatest {
                         postAdapter.submitData(it)
                     }
                 }
             }
         }
+        // =========================================
 
         viewLifecycleOwner.lifecycleScope.launch {
             postAdapter.loadStateFlow.collectLatest {
@@ -143,5 +157,4 @@ class PostsFragment : Fragment() {
 
         return binding.root
     }
-
 }

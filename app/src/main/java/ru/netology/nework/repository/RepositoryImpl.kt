@@ -426,7 +426,6 @@ class RepositoryImpl @Inject constructor(
         }
     }
 
-
     private fun toastMsg(msg: String) {
         Toast.makeText(
             context,
@@ -435,4 +434,17 @@ class RepositoryImpl @Inject constructor(
         ).show()
     }
 
+    override suspend fun getUserWall(userId: Long): List<Post> {
+        try {
+            val response = apiService.wallGetAllPost(userId)
+            if (!response.isSuccessful) {
+                throw ApiError(response.code(), response.message())
+            }
+            return response.body() ?: throw ApiError(response.code(), response.message())
+        } catch (e: IOException) {
+            throw NetworkError
+        } catch (e: Exception) {
+            throw UnknownError
+        }
+    }
 }
