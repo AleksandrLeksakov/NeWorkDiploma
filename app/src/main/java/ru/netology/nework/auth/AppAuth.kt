@@ -1,5 +1,6 @@
 package ru.netology.nework.auth
 
+import android.annotation.SuppressLint
 import android.content.Context
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -28,6 +29,7 @@ class AppAuth @Inject constructor(
 
     val authState: StateFlow<AuthModel> = _authState.asStateFlow()
 
+    @SuppressLint("UseKtx")
     @Synchronized
     fun setAuth(id: Long, token: String) {
         _authState.value = AuthModel(id, token)
@@ -38,6 +40,7 @@ class AppAuth @Inject constructor(
         }
     }
 
+    @SuppressLint("UseKtx")
     @Synchronized
     fun removeAuth() {
         _authState.value = AuthModel()

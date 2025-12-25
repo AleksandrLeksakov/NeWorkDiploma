@@ -29,5 +29,5 @@ data class UserEntity(
     }
 }
 
-fun List<UserEntity>.toDto(): List<UserResponse> = map(UserEntity::toDto)
+//fun List<UserEntity>.toDto(): List<UserResponse> = map(UserEntity::toDto)
 fun List<UserResponse>.toEntity(): List<UserEntity> = map(UserEntity.Companion::fromDto)

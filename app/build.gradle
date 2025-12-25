@@ -1,7 +1,6 @@
 apply plugin: 'com.android.application'
 apply plugin: 'kotlin-android'
 apply plugin: 'com.google.devtools.ksp'
-//apply plugin: 'com.google.gms.google-services'
 apply plugin: 'dagger.hilt.android.plugin'
 
 def secretProperties = new Properties()
@@ -45,6 +44,7 @@ android {
         coreLibraryDesugaringEnabled true
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
+
     }
 
     kotlinOptions {
@@ -84,7 +84,6 @@ dependencies {
     def mdc_version = "1.13.0"
     def nav_version = "2.9.6"
     def room_version = "2.8.4"
-   // def firebase_version = "34.1.0"
     def glide_version = "5.0.5"
     def retrofit_version = "3.0.0"
     def retrofitgson_version = "3.0.0"
@@ -120,8 +119,6 @@ dependencies {
     ksp "androidx.room:room-compiler:$room_version"
     implementation "androidx.room:room-ktx:$room_version"
     implementation "androidx.room:room-paging:$room_version"
-   // implementation platform("com.google.firebase:firebase-bom:$firebase_version")
-    //implementation "com.google.firebase:firebase-messaging"
     implementation "com.google.android.gms:play-services-base:$play_services_base_version"
     implementation "com.squareup.retrofit2:retrofit:$retrofit_version"
     implementation "com.squareup.retrofit2:converter-gson:$retrofitgson_version"
@@ -139,5 +136,6 @@ dependencies {
     implementation("androidx.media3:media3-exoplayer-dash:$exoPlayerVersion")
     implementation("androidx.media3:media3-ui:$exoPlayerVersion")
     // Yandex MapKit
+    //noinspection Aligned16KB
     implementation "com.yandex.android:maps.mobile:$yandex_mapkit_version"
 }
