@@ -12,8 +12,8 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.paging.PagingDataAdapter
 import androidx.recyclerview.widget.RecyclerView
 import ru.netology.nework.R
+import ru.netology.nework.adapter.listeners.PostInteractionListener
 import ru.netology.nework.adapter.tools.FeedItemCallBack
-import ru.netology.nework.adapter.tools.OnInteractionListener
 import ru.netology.nework.databinding.CardPostBinding
 import ru.netology.nework.dto.AttachmentType
 import ru.netology.nework.dto.FeedItem
@@ -23,7 +23,7 @@ import ru.netology.nework.extension.loadAvatar
 import java.time.format.DateTimeFormatter
 
 class PostAdapter(
-    private val onInteractionListener: OnInteractionListener,
+    private val listener: PostInteractionListener,
 ) : PagingDataAdapter<FeedItem, PostViewHolder>(FeedItemCallBack()) {
 
     override fun onViewRecycled(holder: PostViewHolder) {
@@ -34,7 +34,7 @@ class PostAdapter(
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): PostViewHolder {
         val binding =
             CardPostBinding.inflate(LayoutInflater.from(parent.context), parent, false)
-        return PostViewHolder(binding, onInteractionListener, parent.context)
+        return PostViewHolder(binding, listener, parent.context)
     }
 
     override fun onBindViewHolder(holder: PostViewHolder, position: Int) {
@@ -45,7 +45,7 @@ class PostAdapter(
 
 class PostViewHolder(
     private val binding: CardPostBinding,
-    private val onInteractionListener: OnInteractionListener,
+    private val listener: PostInteractionListener,
     private val context: Context
 ) : RecyclerView.ViewHolder(binding.root) {
 
@@ -118,7 +118,7 @@ class PostViewHolder(
             })
 
             buttonLike.setOnClickListener {
-                onInteractionListener.like(post)
+                listener.onLike(post)
             }
 
             buttonOption.isVisible = post.ownedByMe
@@ -128,12 +128,12 @@ class PostViewHolder(
                     setOnMenuItemClickListener { item ->
                         when (item.itemId) {
                             R.id.delete -> {
-                                onInteractionListener.delete(post)
+                                listener.onDelete(post)
                                 true
                             }
 
                             R.id.edit -> {
-                                onInteractionListener.edit(post)
+                                listener.onEdit(post)
                                 true
                             }
 
@@ -141,15 +141,12 @@ class PostViewHolder(
                         }
                     }
                     gravity = Gravity.END
-                }
-                    .show()
+                }.show()
             }
 
-            binding.cardPost.setOnClickListener {
-                onInteractionListener.openCard(post)
+            cardPost.setOnClickListener {
+                listener.onOpenCard(post)
             }
-
-
         }
     }
 
@@ -163,5 +160,4 @@ class PostViewHolder(
     fun stopPlayer() {
         player?.stop()
     }
-
 }

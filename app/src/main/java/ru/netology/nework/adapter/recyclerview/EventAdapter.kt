@@ -12,8 +12,8 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.paging.PagingDataAdapter
 import androidx.recyclerview.widget.RecyclerView
 import ru.netology.nework.R
+import ru.netology.nework.adapter.listeners.EventInteractionListener
 import ru.netology.nework.adapter.tools.FeedItemCallBack
-import ru.netology.nework.adapter.tools.OnInteractionListener
 import ru.netology.nework.databinding.CardEventBinding
 import ru.netology.nework.dto.AttachmentType
 import ru.netology.nework.dto.Event
@@ -24,7 +24,7 @@ import ru.netology.nework.extension.loadAvatar
 import java.time.format.DateTimeFormatter
 
 class EventAdapter(
-    private val onInteractionListener: OnInteractionListener
+    private val listener: EventInteractionListener
 ) : PagingDataAdapter<FeedItem, EventViewHolder>(FeedItemCallBack()) {
 
     override fun onViewRecycled(holder: EventViewHolder) {
@@ -35,7 +35,7 @@ class EventAdapter(
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): EventViewHolder {
         val binding =
             CardEventBinding.inflate(LayoutInflater.from(parent.context), parent, false)
-        return EventViewHolder(binding, onInteractionListener, parent.context)
+        return EventViewHolder(binding, listener, parent.context)
     }
 
     override fun onBindViewHolder(holder: EventViewHolder, position: Int) {
@@ -46,7 +46,7 @@ class EventAdapter(
 
 class EventViewHolder(
     private val binding: CardEventBinding,
-    private val onInteractionListener: OnInteractionListener,
+    private val listener: EventInteractionListener,
     private val context: Context
 ) : RecyclerView.ViewHolder(binding.root) {
 
@@ -131,12 +131,12 @@ class EventViewHolder(
                     setOnMenuItemClickListener { item ->
                         when (item.itemId) {
                             R.id.delete -> {
-                                onInteractionListener.delete(event)
+                                listener.onDelete(event)
                                 true
                             }
 
                             R.id.edit -> {
-                                onInteractionListener.edit(event)
+                                listener.onEdit(event)
                                 true
                             }
 
@@ -144,19 +144,16 @@ class EventViewHolder(
                         }
                     }
                     gravity = Gravity.END
-                }
-                    .show()
+                }.show()
             }
 
             buttonLike.setOnClickListener {
-                onInteractionListener.like(event)
+                listener.onLike(event)
             }
 
             cardEvent.setOnClickListener {
-                onInteractionListener.openCard(event)
+                listener.onOpenCard(event)
             }
-
-
         }
     }
 
@@ -170,5 +167,4 @@ class EventViewHolder(
     fun stopPlayer() {
         player?.stop()
     }
-
 }

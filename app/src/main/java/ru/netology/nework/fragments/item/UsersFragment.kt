@@ -26,8 +26,8 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import ru.netology.nework.R
+import ru.netology.nework.adapter.listeners.UserInteractionListener
 import ru.netology.nework.adapter.recyclerview.UserAdapter
-import ru.netology.nework.adapter.tools.OnInteractionListener
 import ru.netology.nework.databinding.FragmentUsersBinding
 import ru.netology.nework.dto.FeedItem
 import ru.netology.nework.dto.UserResponse
@@ -74,27 +74,27 @@ class UsersFragment : Fragment() {
             else -> null
         }
 
-        val userAdapter = UserAdapter(object : OnInteractionListener {
-            override fun like(feedItem: FeedItem) {}
-            override fun delete(feedItem: FeedItem) {}
-            override fun edit(feedItem: FeedItem) {}
-
-            override fun selectUser(userResponse: UserResponse) {
-                if (selectedUsers.contains(userResponse.id)) {
-                    selectedUsers.remove(userResponse.id)
-                } else {
-                    selectedUsers.add(userResponse.id)
+        val userAdapter = UserAdapter(
+            listener = object : UserInteractionListener {
+                override fun onSelectUser(userResponse: UserResponse) {
+                    if (selectedUsers.contains(userResponse.id)) {
+                        selectedUsers.remove(userResponse.id)
+                    } else {
+                        selectedUsers.add(userResponse.id)
+                    }
                 }
-            }
 
-            override fun openCard(feedItem: FeedItem) {
-                parentNavController?.navigate(
-                    R.id.action_mainFragment_to_detailUserFragment,
-                    bundleOf(AppConst.USER_ID to feedItem.id)
-                )
-            }
+                override fun onOpenCard(feedItem: FeedItem) {
+                    parentNavController?.navigate(
+                        R.id.action_mainFragment_to_detailUserFragment,
+                        bundleOf(AppConst.USER_ID to feedItem.id)
+                    )
+                }
+            },
+            selectUser = arg,
+            selectedUsers = selectedUsers
+        )
 
-        }, arg, selectedUsers)
         binding.recyclerViewUser.adapter = userAdapter
 
         viewLifecycleOwner.lifecycleScope.launch {
@@ -104,7 +104,8 @@ class UsersFragment : Fragment() {
                         userAdapter.submitData(
                             it.filter { item ->
                                 item.id in involved
-                            })
+                            }
+                        )
                     } else {
                         userAdapter.submitData(it)
                     }
@@ -114,8 +115,7 @@ class UsersFragment : Fragment() {
 
         viewLifecycleOwner.lifecycleScope.launch {
             userAdapter.loadStateFlow.collectLatest {
-                binding.swipeRefresh.isRefreshing =
-                    it.refresh is LoadState.Loading
+                binding.swipeRefresh.isRefreshing = it.refresh is LoadState.Loading
 
                 if (it.refresh is LoadState.Error) {
                     Snackbar.make(
@@ -163,8 +163,6 @@ class UsersFragment : Fragment() {
             findNavController().navigateUp()
         }
 
-
         return binding.root
     }
-
 }

@@ -20,18 +20,16 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import ru.netology.nework.R
+import ru.netology.nework.adapter.listeners.PostInteractionListener
 import ru.netology.nework.adapter.recyclerview.PostAdapter
 import ru.netology.nework.adapter.recyclerview.PostViewHolder
-import ru.netology.nework.adapter.tools.OnInteractionListener
 import ru.netology.nework.databinding.FragmentPostsBinding
 import ru.netology.nework.dto.FeedItem
 import ru.netology.nework.dto.Post
-import ru.netology.nework.dto.UserResponse
 import ru.netology.nework.model.AuthModel
 import ru.netology.nework.util.AppConst
 import ru.netology.nework.viewmodel.AuthViewModel
 import ru.netology.nework.viewmodel.PostViewModel
-
 
 @AndroidEntryPoint
 class PostsFragment : Fragment() {
@@ -52,8 +50,8 @@ class PostsFragment : Fragment() {
 
         val userId = arguments?.getLong(AppConst.USER_ID)
 
-        val postAdapter = PostAdapter(object : OnInteractionListener {
-            override fun like(feedItem: FeedItem) {
+        val postAdapter = PostAdapter(object : PostInteractionListener {
+            override fun onLike(feedItem: FeedItem) {
                 if (token?.id != 0L && token?.id.toString().isNotEmpty()) {
                     postViewModel.like(feedItem as Post)
                 } else {
@@ -61,11 +59,11 @@ class PostsFragment : Fragment() {
                 }
             }
 
-            override fun delete(feedItem: FeedItem) {
+            override fun onDelete(feedItem: FeedItem) {
                 postViewModel.deletePost(feedItem as Post)
             }
 
-            override fun edit(feedItem: FeedItem) {
+            override fun onEdit(feedItem: FeedItem) {
                 feedItem as Post
                 postViewModel.edit(feedItem)
                 parentNavController?.navigate(
@@ -74,9 +72,7 @@ class PostsFragment : Fragment() {
                 )
             }
 
-            override fun selectUser(userResponse: UserResponse) {}
-
-            override fun openCard(feedItem: FeedItem) {
+            override fun onOpenCard(feedItem: FeedItem) {
                 postViewModel.openPost(feedItem as Post)
 
                 val navController = parentNavController ?: return
@@ -93,22 +89,16 @@ class PostsFragment : Fragment() {
 
         binding.recyclerViewPost.adapter = postAdapter
 
-
         if (userId != null) {
-            // ЗАГРУЗКА СТЕНЫ ПОЛЬЗОВАТЕЛЯ
             postViewModel.loadUserWall(userId)
-
-            // Наблюдаем за результатом
             postViewModel.userWall.observe(viewLifecycleOwner) { wallPosts ->
                 if (wallPosts != null) {
                     viewLifecycleOwner.lifecycleScope.launch {
-                        // Преобразуем List в PagingData
                         postAdapter.submitData(PagingData.from(wallPosts))
                     }
                 }
             }
         } else {
-            // ОБЩАЯ ЛЕНТА
             viewLifecycleOwner.lifecycleScope.launch {
                 viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                     postViewModel.data.collectLatest {
@@ -120,8 +110,7 @@ class PostsFragment : Fragment() {
 
         viewLifecycleOwner.lifecycleScope.launch {
             postAdapter.loadStateFlow.collectLatest {
-                binding.swipeRefresh.isRefreshing =
-                    it.refresh is LoadState.Loading
+                binding.swipeRefresh.isRefreshing = it.refresh is LoadState.Loading
                 if (it.append is LoadState.Error
                     || it.prepend is LoadState.Error
                     || it.refresh is LoadState.Error
@@ -139,11 +128,12 @@ class PostsFragment : Fragment() {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 suspendCancellableCoroutine {
                     it.invokeOnCancellation {
-                        (0..<binding.recyclerViewPost.childCount)
+                        (0 until binding.recyclerViewPost.childCount)
+                            .asSequence()
                             .map(binding.recyclerViewPost::getChildAt)
                             .map(binding.recyclerViewPost::getChildViewHolder)
                             .filterIsInstance<PostViewHolder>()
-                            .onEach(PostViewHolder::stopPlayer)
+                            .forEach(PostViewHolder::stopPlayer)
                     }
                 }
             }

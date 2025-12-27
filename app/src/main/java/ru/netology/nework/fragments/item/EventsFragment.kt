@@ -18,13 +18,12 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import ru.netology.nework.R
+import ru.netology.nework.adapter.listeners.EventInteractionListener
 import ru.netology.nework.adapter.recyclerview.EventAdapter
 import ru.netology.nework.adapter.recyclerview.EventViewHolder
-import ru.netology.nework.adapter.tools.OnInteractionListener
 import ru.netology.nework.databinding.FragmentEventsBinding
 import ru.netology.nework.dto.Event
 import ru.netology.nework.dto.FeedItem
-import ru.netology.nework.dto.UserResponse
 import ru.netology.nework.model.AuthModel
 import ru.netology.nework.util.AppConst
 import ru.netology.nework.viewmodel.AuthViewModel
@@ -47,8 +46,8 @@ class EventsFragment : Fragment() {
             token = state
         }
 
-        val eventAdapter = EventAdapter(object : OnInteractionListener {
-            override fun like(feedItem: FeedItem) {
+        val eventAdapter = EventAdapter(object : EventInteractionListener {
+            override fun onLike(feedItem: FeedItem) {
                 if (token?.id != 0L && token?.id.toString().isNotEmpty()) {
                     eventViewModel.like(feedItem as Event)
                 } else {
@@ -56,11 +55,11 @@ class EventsFragment : Fragment() {
                 }
             }
 
-            override fun delete(feedItem: FeedItem) {
+            override fun onDelete(feedItem: FeedItem) {
                 eventViewModel.deleteEvent(feedItem as Event)
             }
 
-            override fun edit(feedItem: FeedItem) {
+            override fun onEdit(feedItem: FeedItem) {
                 feedItem as Event
                 eventViewModel.edit(feedItem)
                 parentNavController?.navigate(
@@ -69,15 +68,14 @@ class EventsFragment : Fragment() {
                 )
             }
 
-            override fun selectUser(userResponse: UserResponse) {}
-
-            override fun openCard(feedItem: FeedItem) {
+            override fun onOpenCard(feedItem: FeedItem) {
                 eventViewModel.openEvent(feedItem as Event)
                 parentNavController?.navigate(R.id.action_mainFragment_to_detailEventFragment)
             }
         })
 
         binding.recyclerViewEvent.adapter = eventAdapter
+
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 eventViewModel.data.collectLatest {
@@ -88,8 +86,7 @@ class EventsFragment : Fragment() {
 
         viewLifecycleOwner.lifecycleScope.launch {
             eventAdapter.loadStateFlow.collectLatest {
-                binding.swipeRefreshEvent.isRefreshing =
-                    it.refresh is LoadState.Loading
+                binding.swipeRefreshEvent.isRefreshing = it.refresh is LoadState.Loading
 
                 if (it.append is LoadState.Error
                     || it.prepend is LoadState.Error
@@ -101,7 +98,6 @@ class EventsFragment : Fragment() {
                         Snackbar.LENGTH_LONG
                     ).show()
                 }
-
             }
         }
 
@@ -109,11 +105,12 @@ class EventsFragment : Fragment() {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 suspendCancellableCoroutine {
                     it.invokeOnCancellation {
-                        (0..<binding.recyclerViewEvent.childCount)
+                        (0 until binding.recyclerViewEvent.childCount)
+                            .asSequence()
                             .map(binding.recyclerViewEvent::getChildAt)
                             .map(binding.recyclerViewEvent::getChildViewHolder)
                             .filterIsInstance<EventViewHolder>()
-                            .onEach(EventViewHolder::stopPlayer)
+                            .forEach(EventViewHolder::stopPlayer)
                     }
                 }
             }
@@ -131,8 +128,6 @@ class EventsFragment : Fragment() {
             }
         }
 
-
         return binding.root
     }
-
 }
