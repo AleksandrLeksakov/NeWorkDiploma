@@ -17,7 +17,7 @@ import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.asRequestBody
 import retrofit2.Response
 import ru.netology.nework.R
-import ru.netology.nework.api.ApiService
+import ru.netology.nework.api.services.*
 import ru.netology.nework.auth.AppAuth
 import ru.netology.nework.dao.event.EventDao
 import ru.netology.nework.dao.post.PostDao
@@ -51,7 +51,15 @@ class RepositoryImpl @Inject constructor(
     @ApplicationContext
     private val context: Context,
     private val appAuth: AppAuth,
-    private val apiService: ApiService,
+    // Новые разделённые сервисы
+    private val authApiService: AuthApiService,
+    private val userApiService: UserApiService,
+    private val postApiService: PostApiService,
+    private val eventApiService: EventApiService,
+    private val jobApiService: JobApiService,
+    private val mediaApiService: MediaApiService,
+    private val wallApiService: WallApiService,
+    // DAO
     private val postDao: PostDao,
     postRemoteMediator: PostRemoteMediator,
     private val eventDao: EventDao,
@@ -66,31 +74,24 @@ class RepositoryImpl @Inject constructor(
         config = PagingConfig(pageSize = 4, enablePlaceholders = false),
         pagingSourceFactory = { postDao.pagingSource() },
         remoteMediator = postRemoteMediator
-    ).flow
-        .map {
-            it.map(PostEntity::toDto)
-        }
-
+    ).flow.map { it.map(PostEntity::toDto) }
 
     override val dataEvent: Flow<PagingData<FeedItem>> = Pager(
         config = PagingConfig(pageSize = 4, enablePlaceholders = false),
         pagingSourceFactory = { eventDao.pagingSource() },
         remoteMediator = eventRemoteMediator
-    ).flow
-        .map {
-            it.map(EventEntity::toDto)
-        }
+    ).flow.map { it.map(EventEntity::toDto) }
 
     override val dataUsers: Flow<PagingData<FeedItem>> = Pager(
         config = PagingConfig(pageSize = 4, enablePlaceholders = false),
         pagingSourceFactory = { userDao.pagingSource() },
         remoteMediator = userRemoteMediator
-    ).flow.map {
-        it.map(UserEntity::toDto)
-    }
+    ).flow.map { it.map(UserEntity::toDto) }
 
     private val _dataJob = MutableLiveData<List<Job>>()
     override val dataJob: LiveData<List<Job>> = _dataJob
+
+    // ============ AUTH ============
 
     override suspend fun register(
         login: String,
@@ -105,21 +106,15 @@ class RepositoryImpl @Inject constructor(
                     attachmentModel.file.name,
                     attachmentModel.file.asRequestBody()
                 )
-                apiService.usersRegistrationWithPhoto(login, pass, name, part)
+                authApiService.registerWithPhoto(login, pass, name, part)
             } else {
-                apiService.usersRegistration(login, pass, name)
+                authApiService.register(login, pass, name)
             }
 
             if (!response.isSuccessful) {
                 when (response.code()) {
-                    403 -> {
-                        toastMsg(context.getString(R.string.the_user_is_already_registered))
-                    }
-
-                    415 -> {
-                        toastMsg(context.getString(R.string.incorrect_photo_format))
-                    }
-
+                    403 -> toastMsg(context.getString(R.string.the_user_is_already_registered))
+                    415 -> toastMsg(context.getString(R.string.incorrect_photo_format))
                     else -> throw ApiError(response.code(), response.message())
                 }
                 return
@@ -136,17 +131,11 @@ class RepositoryImpl @Inject constructor(
 
     override suspend fun login(login: String, pass: String) {
         try {
-            val response = apiService.usersAuthentication(login, pass)
+            val response = authApiService.authenticate(login, pass)
             if (!response.isSuccessful) {
                 when (response.code()) {
-                    400 -> {
-                        toastMsg(context.getString(R.string.incorrect_password))
-                    }
-
-                    404 -> {
-                        toastMsg(context.getString(R.string.user_unregistered))
-                    }
-
+                    400 -> toastMsg(context.getString(R.string.incorrect_password))
+                    404 -> toastMsg(context.getString(R.string.user_unregistered))
                     else -> throw ApiError(response.code(), response.message())
                 }
                 return
@@ -165,13 +154,14 @@ class RepositoryImpl @Inject constructor(
         appAuth.removeAuth()
     }
 
+    // ============ USER ============
+
     override suspend fun getUser(id: Long): UserResponse {
         try {
-            val response = apiService.usersGetUser(id)
+            val response = userApiService.getUserById(id)
             if (!response.isSuccessful) {
                 throw ApiError(response.code(), response.message())
             }
-
             return response.body() ?: throw ApiError(response.code(), response.message())
         } catch (e: IOException) {
             throw NetworkError
@@ -180,16 +170,14 @@ class RepositoryImpl @Inject constructor(
         }
     }
 
+    // ============ POST ============
+
     override suspend fun like(post: Post) {
         try {
-            val response = when (post.likedByMe) {
-                true -> {
-                    apiService.postsUnLikePost(post.id)
-                }
-
-                else -> {
-                    apiService.postsLikePost(post.id)
-                }
+            val response = if (post.likedByMe) {
+                postApiService.unlike(post.id)
+            } else {
+                postApiService.like(post.id)
             }
 
             if (!response.isSuccessful) {
@@ -197,7 +185,6 @@ class RepositoryImpl @Inject constructor(
             }
 
             val body = response.body() ?: throw ApiError(response.code(), response.message())
-
             postDao.insert(PostEntity.fromDto(body))
         } catch (e: IOException) {
             throw NetworkError
@@ -208,7 +195,7 @@ class RepositoryImpl @Inject constructor(
 
     override suspend fun savePost(post: Post) {
         try {
-            val response = apiService.postsSavePost(post)
+            val response = postApiService.save(post)
             if (!response.isSuccessful) {
                 throw ApiError(response.code(), response.message())
             }
@@ -228,17 +215,12 @@ class RepositoryImpl @Inject constructor(
             if (!mediaResponse.isSuccessful) {
                 throw ApiError(mediaResponse.code(), mediaResponse.message())
             }
-            val media = mediaResponse.body() ?: throw ApiError(
-                mediaResponse.code(),
-                mediaResponse.message()
-            )
+            val media = mediaResponse.body()
+                ?: throw ApiError(mediaResponse.code(), mediaResponse.message())
 
-            val response = apiService.postsSavePost(
+            val response = postApiService.save(
                 post.copy(
-                    attachment = Attachment(
-                        media.url,
-                        attachmentModel.attachmentType
-                    )
+                    attachment = Attachment(media.url, attachmentModel.attachmentType)
                 )
             )
             if (!response.isSuccessful) {
@@ -246,7 +228,6 @@ class RepositoryImpl @Inject constructor(
             }
             val body = response.body() ?: throw ApiError(response.code(), response.message())
             postDao.insert(PostEntity.fromDto(body))
-
         } catch (e: IOException) {
             throw NetworkError
         } catch (e: Exception) {
@@ -254,14 +235,9 @@ class RepositoryImpl @Inject constructor(
         }
     }
 
-    private suspend fun saveMedia(file: File): Response<Media> {
-        val part = MultipartBody.Part.createFormData("file", file.name, file.asRequestBody())
-        return apiService.mediaSaveMedia(part)
-    }
-
     override suspend fun deletePost(id: Long) {
         try {
-            val response = apiService.postsDeletePost(id)
+            val response = postApiService.delete(id)
             if (!response.isSuccessful) {
                 throw ApiError(response.code(), response.message())
             }
@@ -273,15 +249,16 @@ class RepositoryImpl @Inject constructor(
         }
     }
 
+    // ============ EVENT ============
+
     override suspend fun saveEvent(event: Event) {
         try {
-            val response = apiService.eventsSaveEvent(event)
+            val response = eventApiService.save(event)
             if (!response.isSuccessful) {
                 throw ApiError(response.code(), response.message())
             }
 
             val body = response.body() ?: throw ApiError(response.code(), response.message())
-
             eventDao.insert(EventEntity.fromDto(body))
         } catch (e: IOException) {
             throw NetworkError
@@ -296,24 +273,18 @@ class RepositoryImpl @Inject constructor(
             if (!mediaResponse.isSuccessful) {
                 throw ApiError(mediaResponse.code(), mediaResponse.message())
             }
-            val media = mediaResponse.body() ?: throw ApiError(
-                mediaResponse.code(),
-                mediaResponse.message()
-            )
+            val media = mediaResponse.body()
+                ?: throw ApiError(mediaResponse.code(), mediaResponse.message())
 
-            val response = apiService.eventsSaveEvent(
+            val response = eventApiService.save(
                 event.copy(
-                    attachment = Attachment(
-                        media.url,
-                        attachmentModel.attachmentType
-                    )
+                    attachment = Attachment(media.url, attachmentModel.attachmentType)
                 )
             )
             if (!response.isSuccessful) {
                 throw ApiError(response.code(), response.message())
             }
             val body = response.body() ?: throw ApiError(response.code(), response.message())
-
             eventDao.insert(EventEntity.fromDto(body))
         } catch (e: IOException) {
             throw NetworkError
@@ -324,11 +295,10 @@ class RepositoryImpl @Inject constructor(
 
     override suspend fun deleteEvent(id: Long) {
         try {
-            val response = apiService.eventsDeleteEvent(id)
+            val response = eventApiService.delete(id)
             if (!response.isSuccessful) {
                 throw ApiError(response.code(), response.message())
             }
-
             eventDao.deleteEvent(id)
         } catch (e: IOException) {
             throw NetworkError
@@ -339,14 +309,10 @@ class RepositoryImpl @Inject constructor(
 
     override suspend fun likeEvent(event: Event) {
         try {
-            val response = when (event.likedByMe) {
-                true -> {
-                    apiService.eventsUnLikeEvent(event.id)
-                }
-
-                else -> {
-                    apiService.eventsLikeEvent(event.id)
-                }
+            val response = if (event.likedByMe) {
+                eventApiService.unlike(event.id)
+            } else {
+                eventApiService.like(event.id)
             }
 
             if (!response.isSuccessful) {
@@ -354,7 +320,6 @@ class RepositoryImpl @Inject constructor(
             }
 
             val body = response.body() ?: throw ApiError(response.code(), response.message())
-
             eventDao.insert(EventEntity.fromDto(body))
         } catch (e: IOException) {
             throw NetworkError
@@ -363,14 +328,15 @@ class RepositoryImpl @Inject constructor(
         }
     }
 
+    // ============ JOB ============
+
     override suspend fun getMyJobs() {
         try {
-            val response = apiService.myJobGetAllJob()
+            val response = jobApiService.getMyJobs()
             if (!response.isSuccessful) {
                 throw ApiError(response.code(), response.message())
             }
             val body = response.body() ?: throw ApiError(response.code(), response.message())
-
             _dataJob.value = body
         } catch (e: IOException) {
             throw NetworkError
@@ -381,12 +347,11 @@ class RepositoryImpl @Inject constructor(
 
     override suspend fun getJobs(userId: Long) {
         try {
-            val response = apiService.jobsGetAllJob(userId)
+            val response = jobApiService.getByUserId(userId)
             if (!response.isSuccessful) {
                 throw ApiError(response.code(), response.message())
             }
             val body = response.body() ?: throw ApiError(response.code(), response.message())
-
             _dataJob.value = body
         } catch (e: IOException) {
             throw NetworkError
@@ -397,12 +362,11 @@ class RepositoryImpl @Inject constructor(
 
     override suspend fun saveJob(job: Job) {
         try {
-            val response = apiService.myJobSaveJob(job)
+            val response = jobApiService.save(job)
             if (!response.isSuccessful) {
                 throw ApiError(response.code(), response.message())
             }
             response.body() ?: throw ApiError(response.code(), response.message())
-
             getMyJobs()
         } catch (e: IOException) {
             throw NetworkError
@@ -413,11 +377,10 @@ class RepositoryImpl @Inject constructor(
 
     override suspend fun deleteJob(id: Long) {
         try {
-            val response = apiService.myJobDeleteJob(id)
+            val response = jobApiService.delete(id)
             if (!response.isSuccessful) {
                 throw ApiError(response.code(), response.message())
             }
-
             _dataJob.value = _dataJob.value?.filter { it.id != id }
         } catch (e: IOException) {
             throw NetworkError
@@ -426,17 +389,18 @@ class RepositoryImpl @Inject constructor(
         }
     }
 
-    private fun toastMsg(msg: String) {
-        Toast.makeText(
-            context,
-            msg,
-            Toast.LENGTH_SHORT
-        ).show()
+    // ============ MEDIA ============
+
+    private suspend fun saveMedia(file: File): Response<Media> {
+        val part = MultipartBody.Part.createFormData("file", file.name, file.asRequestBody())
+        return mediaApiService.save(part)
     }
+
+    // ============ WALL ============
 
     override suspend fun getUserWall(userId: Long): List<Post> {
         try {
-            val response = apiService.wallGetAllPost(userId)
+            val response = wallApiService.getByAuthorId(userId)
             if (!response.isSuccessful) {
                 throw ApiError(response.code(), response.message())
             }
@@ -446,5 +410,11 @@ class RepositoryImpl @Inject constructor(
         } catch (e: Exception) {
             throw UnknownError
         }
+    }
+
+    // ============ UTILS ============
+
+    private fun toastMsg(msg: String) {
+        Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
     }
 }

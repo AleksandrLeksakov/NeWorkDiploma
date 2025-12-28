@@ -5,7 +5,7 @@ import androidx.paging.LoadType
 import androidx.paging.PagingState
 import androidx.paging.RemoteMediator
 import androidx.room.withTransaction
-import ru.netology.nework.api.ApiService
+import ru.netology.nework.api.services.PostApiService
 import ru.netology.nework.dao.post.PostDao
 import ru.netology.nework.dao.post.PostRemoteKeyDao
 import ru.netology.nework.db.AppDb
@@ -20,7 +20,7 @@ import javax.inject.Singleton
 @OptIn(ExperimentalPagingApi::class)
 @Singleton
 class PostRemoteMediator @Inject constructor(
-    private val apiService: ApiService,
+    private val postApiService: PostApiService,
     private val appDb: AppDb,
     private val postDao: PostDao,
     private val postRemoteKeyDao: PostRemoteKeyDao,
@@ -33,7 +33,6 @@ class PostRemoteMediator @Inject constructor(
             InitializeAction.SKIP_INITIAL_REFRESH
         }
 
-
     override suspend fun load(
         loadType: LoadType,
         state: PagingState<Int, PostEntity>
@@ -44,20 +43,20 @@ class PostRemoteMediator @Inject constructor(
                 LoadType.REFRESH -> {
                     val id = postRemoteKeyDao.max()
                     if (id != null) {
-                        apiService.postsGetAfterPost(id, state.config.pageSize)
+                        postApiService.getAfter(id, state.config.pageSize)
                     } else {
-                        apiService.postsGetLatestPage(state.config.pageSize)
+                        postApiService.getLatest(state.config.pageSize)
                     }
                 }
 
                 LoadType.PREPEND -> {
                     val id = postRemoteKeyDao.max() ?: return MediatorResult.Success(false)
-                    apiService.postsGetAfterPost(id, state.config.pageSize)
+                    postApiService.getAfter(id, state.config.pageSize)
                 }
 
                 LoadType.APPEND -> {
                     val id = postRemoteKeyDao.min() ?: return MediatorResult.Success(false)
-                    apiService.postsGetBeforePost(id, state.config.pageSize)
+                    postApiService.getBefore(id, state.config.pageSize)
                 }
             }
 
@@ -96,7 +95,6 @@ class PostRemoteMediator @Inject constructor(
                         }
 
                         LoadType.PREPEND -> {
-                            println("prep")
                             postRemoteKeyDao.insert(
                                 PostRemoteKeyEntity(
                                     KeyType.AFTER,
@@ -116,7 +114,6 @@ class PostRemoteMediator @Inject constructor(
                     }
 
                     postDao.insertAll(body.toEntity())
-
                 }
             }
 

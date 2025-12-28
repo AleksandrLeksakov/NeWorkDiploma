@@ -5,7 +5,7 @@ import androidx.paging.LoadType
 import androidx.paging.PagingState
 import androidx.paging.RemoteMediator
 import androidx.room.withTransaction
-import ru.netology.nework.api.ApiService
+import ru.netology.nework.api.services.EventApiService
 import ru.netology.nework.dao.event.EventDao
 import ru.netology.nework.dao.event.EventRemoteKeyDao
 import ru.netology.nework.db.AppDb
@@ -20,7 +20,7 @@ import javax.inject.Singleton
 @OptIn(ExperimentalPagingApi::class)
 @Singleton
 class EventRemoteMediator @Inject constructor(
-    private val apiService: ApiService,
+    private val eventApiService: EventApiService,
     private val appDb: AppDb,
     private val eventDao: EventDao,
     private val eventRemoteKeyDao: EventRemoteKeyDao,
@@ -33,7 +33,6 @@ class EventRemoteMediator @Inject constructor(
             InitializeAction.SKIP_INITIAL_REFRESH
         }
 
-
     override suspend fun load(
         loadType: LoadType,
         state: PagingState<Int, EventEntity>
@@ -44,20 +43,20 @@ class EventRemoteMediator @Inject constructor(
                 LoadType.REFRESH -> {
                     val id = eventRemoteKeyDao.max()
                     if (id != null) {
-                        apiService.eventsGetAfterEvent(id, state.config.pageSize)
+                        eventApiService.getAfter(id, state.config.pageSize)
                     } else {
-                        apiService.eventsGetLatestPageEvent(state.config.pageSize)
+                        eventApiService.getLatest(state.config.pageSize)
                     }
                 }
 
                 LoadType.PREPEND -> {
                     val id = eventRemoteKeyDao.max() ?: return MediatorResult.Success(false)
-                    apiService.eventsGetAfterEvent(id, state.config.pageSize)
+                    eventApiService.getAfter(id, state.config.pageSize)
                 }
 
                 LoadType.APPEND -> {
                     val id = eventRemoteKeyDao.min() ?: return MediatorResult.Success(false)
-                    apiService.eventsGetBeforeEvent(id, state.config.pageSize)
+                    eventApiService.getBefore(id, state.config.pageSize)
                 }
             }
 

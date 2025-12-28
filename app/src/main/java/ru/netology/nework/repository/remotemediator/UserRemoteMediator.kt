@@ -4,7 +4,7 @@ import androidx.paging.ExperimentalPagingApi
 import androidx.paging.LoadType
 import androidx.paging.PagingState
 import androidx.paging.RemoteMediator
-import ru.netology.nework.api.ApiService
+import ru.netology.nework.api.services.UserApiService
 import ru.netology.nework.dao.user.UserDao
 import ru.netology.nework.entity.user.UserEntity
 import ru.netology.nework.entity.user.toEntity
@@ -15,22 +15,24 @@ import javax.inject.Singleton
 @OptIn(ExperimentalPagingApi::class)
 @Singleton
 class UserRemoteMediator @Inject constructor(
-    private val apiService: ApiService,
+    private val userApiService: UserApiService,
     private val userDao: UserDao
 ) : RemoteMediator<Int, UserEntity>() {
+
     override suspend fun load(
         loadType: LoadType,
         state: PagingState<Int, UserEntity>
     ): MediatorResult {
         return try {
             if (loadType == LoadType.REFRESH) {
-                val response = apiService.usersGetAllUser()
+                val response = userApiService.getAllUsers()
 
                 if (!response.isSuccessful) {
                     throw ApiError(response.code(), response.message())
                 }
 
-                val body = response.body() ?: throw ApiError(response.code(), response.message())
+                val body = response.body()
+                    ?: throw ApiError(response.code(), response.message())
 
                 userDao.insertAll(body.toEntity())
             }
@@ -38,6 +40,5 @@ class UserRemoteMediator @Inject constructor(
         } catch (e: Exception) {
             MediatorResult.Error(e)
         }
-
     }
 }
