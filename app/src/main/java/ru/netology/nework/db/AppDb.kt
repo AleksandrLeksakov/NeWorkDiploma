@@ -20,7 +20,7 @@ import ru.netology.nework.entity.user.UserEntity
         EventEntity::class,
         EventRemoteKeyEntity::class,
         UserEntity::class,
-    ], version = 1
+    ], version = 2
 )
 abstract class AppDb : RoomDatabase() {
     abstract fun postDao(): PostDao

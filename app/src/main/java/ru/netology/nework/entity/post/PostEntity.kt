@@ -31,12 +31,12 @@ data class PostEntity(
     val published: String,
     val coords: Coordinates? = null,
     val link: String? = null,
-    val mentionIds: List<Long>,
-    val mentionedMe: Boolean,
-    val likeOwnerIds: List<Long>,
-    val likedByMe: Boolean,
+    val mentionIds: List<Long> = emptyList(),
+    val mentionedMe: Boolean = false,
+    val likeOwnerIds: List<Long> = emptyList(),
+    val likedByMe: Boolean = false,
     val attachment: Attachment? = null,
-    val users: Map<String, UserPreview>,
+    val users: Map<Long, UserPreview> = emptyMap(),
     val ownedByMe: Boolean = false,
 ) {
     fun toDto() = Post(
@@ -80,5 +80,4 @@ data class PostEntity(
     }
 }
 
-//fun List<PostEntity>.toDto(): List<Post> = map(PostEntity::toDto)
 fun List<Post>.toEntity(): List<PostEntity> = map(PostEntity.Companion::fromDto)

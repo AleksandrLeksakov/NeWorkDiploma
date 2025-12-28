@@ -1,10 +1,11 @@
-@file:Suppress("unused")
-
 package ru.netology.nework.api
 
+import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.google.gson.TypeAdapter
+import com.google.gson.reflect.TypeToken
 import com.google.gson.stream.JsonReader
+import com.google.gson.stream.JsonToken
 import com.google.gson.stream.JsonWriter
 import dagger.Module
 import dagger.Provides
@@ -23,6 +24,7 @@ import ru.netology.nework.api.services.PostApiService
 import ru.netology.nework.api.services.UserApiService
 import ru.netology.nework.api.services.WallApiService
 import ru.netology.nework.auth.AppAuth
+import ru.netology.nework.dto.UserPreview
 import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.ZoneId
@@ -54,26 +56,82 @@ class ApiServiceModule {
 
     @Singleton
     @Provides
-    fun provideRetrofit(okHttpClient: OkHttpClient): Retrofit = Retrofit.Builder()
-        .addConverterFactory(
-            GsonConverterFactory.create(
-                GsonBuilder().registerTypeAdapter(
-                    OffsetDateTime::class.java,
-                    object : TypeAdapter<OffsetDateTime>() {
-                        override fun write(out: JsonWriter?, value: OffsetDateTime?) {
-                            out?.value(value?.toEpochSecond())
-                        }
-
-                        override fun read(jsonReader: JsonReader): OffsetDateTime {
-                            return OffsetDateTime.ofInstant(
-                                Instant.parse(jsonReader.nextString()),
-                                ZoneId.systemDefault()
-                            )
-                        }
+    fun provideGson(): Gson = GsonBuilder()
+        // Адаптер для OffsetDateTime
+        .registerTypeAdapter(
+            OffsetDateTime::class.java,
+            object : TypeAdapter<OffsetDateTime>() {
+                override fun write(out: JsonWriter, value: OffsetDateTime?) {
+                    if (value == null) {
+                        out.nullValue()
+                    } else {
+                        out.value(value.toEpochSecond())
                     }
-                ).create()
-            )
+                }
+
+                override fun read(jsonReader: JsonReader): OffsetDateTime? {
+                    return if (jsonReader.peek() == JsonToken.NULL) {
+                        jsonReader.nextNull()
+                        null
+                    } else {
+                        OffsetDateTime.ofInstant(
+                            Instant.parse(jsonReader.nextString()),
+                            ZoneId.systemDefault()
+                        )
+                    }
+                }
+            }
         )
+        // Адаптер для Map<Long, UserPreview>
+        .registerTypeAdapter(
+            object : TypeToken<Map<Long, UserPreview>>() {}.type,
+            object : TypeAdapter<Map<Long, UserPreview>>() {
+                private val delegateAdapter: TypeAdapter<UserPreview> by lazy {
+                    Gson().getAdapter(UserPreview::class.java)
+                }
+
+                override fun write(out: JsonWriter, value: Map<Long, UserPreview>?) {
+                    if (value == null) {
+                        out.nullValue()
+                        return
+                    }
+                    out.beginObject()
+                    value.forEach { (key, userPreview) ->
+                        out.name(key.toString())
+                        delegateAdapter.write(out, userPreview)
+                    }
+                    out.endObject()
+                }
+
+                override fun read(reader: JsonReader): Map<Long, UserPreview> {
+                    val result = mutableMapOf<Long, UserPreview>()
+
+                    if (reader.peek() == JsonToken.NULL) {
+                        reader.nextNull()
+                        return emptyMap()
+                    }
+
+                    reader.beginObject()
+                    while (reader.hasNext()) {
+                        val key = reader.nextName().toLong()
+                        val value = delegateAdapter.read(reader)
+                        result[key] = value
+                    }
+                    reader.endObject()
+
+                    return result
+                }
+            }
+        )
+        .create()
+
+    @Singleton
+    @Provides
+    fun provideRetrofit(
+        okHttpClient: OkHttpClient,
+        gson: Gson
+    ): Retrofit = Retrofit.Builder()
+        .addConverterFactory(GsonConverterFactory.create(gson))
         .baseUrl(BASE_URL)
         .client(okHttpClient)
         .build()

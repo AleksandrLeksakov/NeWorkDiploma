@@ -12,12 +12,12 @@ class CoordsConverter {
 
     @TypeConverter
     fun fromCoords(coords: Coordinates?): String? {
-        return if (coords != null) gson.toJson(coords) else null
+        return coords?.let { gson.toJson(it) }
     }
 
     @TypeConverter
     fun toCoords(coords: String?): Coordinates? {
-        return if (coords != null) gson.fromJson(coords, Coordinates::class.java) else null
+        return coords?.let { gson.fromJson(it, Coordinates::class.java) }
     }
 }
 
@@ -27,14 +27,13 @@ class MentionIdsConverter {
 
     @TypeConverter
     fun fromMentionIds(mentionIds: List<Long>?): String? {
-        return if (mentionIds != null) gson.toJson(mentionIds) else null
+        return mentionIds?.let { gson.toJson(it) }
     }
 
     @TypeConverter
     fun toMentionIds(mentionIds: String?): List<Long>? {
-        return if (mentionIds != null) gson.fromJson(mentionIds, typeToken) else null
+        return mentionIds?.let { gson.fromJson(it, typeToken) }
     }
-
 }
 
 class AttachmentConverter {
@@ -42,29 +41,36 @@ class AttachmentConverter {
 
     @TypeConverter
     fun fromAttachment(attachment: Attachment?): String? {
-        return if (attachment != null) gson.toJson(attachment) else null
+        return attachment?.let { gson.toJson(it) }
     }
 
     @TypeConverter
     fun toAttachment(attachment: String?): Attachment? {
-        return if (attachment != null) gson.fromJson(
-            attachment,
-            Attachment::class.java
-        ) else null
+        return attachment?.let { gson.fromJson(it, Attachment::class.java) }
     }
 }
 
 class UsersConverter {
     private val gson = Gson()
-    private val typeToken = object : TypeToken<Map<String, UserPreview>>() {}.type
+
+    // TypeToken для Map<Long, UserPreview>
+    private val typeToken = object : TypeToken<Map<Long, UserPreview>>() {}.type
 
     @TypeConverter
-    fun fromAttachment(users: Map<String, UserPreview>?): String? {
-        return if (users != null) gson.toJson(users) else null
+    fun fromUsers(users: Map<Long, UserPreview>?): String? {
+        return users?.let { gson.toJson(it) }
     }
 
     @TypeConverter
-    fun toAttachment(users: String?): Map<String, UserPreview>? {
-        return if (users != null) gson.fromJson(users, typeToken) else null
+    fun toUsers(users: String?): Map<Long, UserPreview>? {
+        if (users == null) return null
+
+        // Gson парсит JSON-объект с числовыми ключами как Map<String, ...>
+        // Поэтому сначала парсим как Map<String, UserPreview>, затем конвертируем ключи
+        val stringKeyType = object : TypeToken<Map<String, UserPreview>>() {}.type
+        val stringKeyMap: Map<String, UserPreview> = gson.fromJson(users, stringKeyType)
+
+        // Конвертируем String ключи в Long
+        return stringKeyMap.mapKeys { (key, _) -> key.toLong() }
     }
 }

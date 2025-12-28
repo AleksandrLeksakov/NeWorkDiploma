@@ -33,14 +33,14 @@ data class EventEntity(
     val published: String,
     val coords: Coordinates? = null,
     val type: EventType,
-    val likeOwnerIds: List<Long>,
-    val likedByMe: Boolean,
-    val speakerIds: List<Long>,
-    val participantsIds: List<Long>,
-    val participatedByMe: Boolean,
+    val likeOwnerIds: List<Long> = emptyList(),
+    val likedByMe: Boolean = false,
+    val speakerIds: List<Long> = emptyList(),
+    val participantsIds: List<Long> = emptyList(),
+    val participatedByMe: Boolean = false,
     val attachment: Attachment? = null,
     val link: String? = null,
-    val users: Map<String, UserPreview>,
+    val users: Map<Long, UserPreview> = emptyMap(),
     val ownedByMe: Boolean = false
 ) {
 
