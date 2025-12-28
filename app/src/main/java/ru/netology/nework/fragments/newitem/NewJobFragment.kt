@@ -23,61 +23,59 @@ import java.util.Locale
 
 @AndroidEntryPoint
 class NewJobFragment : Fragment() {
-    private val jobViewModel: JobViewModel by activityViewModels()
-    private val formatter = DateTimeFormatter.ofPattern("MM/dd/yyyy", Locale.getDefault())
-    private val emptyOffsetDateTime =
-        OffsetDateTime.of(1970, 1, 1, 0, 0, 0, 0, ZoneOffset.UTC)
 
-    private var flagEmptyField = false
-    var name = ""
-    var position = ""
-    var link = ""
+    private val jobViewModel: JobViewModel by activityViewModels()
+
+    private var _binding: FragmentNewJobBinding? = null
+    private val binding get() = _binding!!
+
+    private val formatter = DateTimeFormatter.ofPattern("MM/dd/yyyy", Locale.getDefault())
+
+    private var name = ""
+    private var position = ""
+    private var link = ""
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
-        val binding = FragmentNewJobBinding.inflate(inflater, container, false)
+        _binding = FragmentNewJobBinding.inflate(inflater, container, false)
+        return binding.root
+    }
 
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+
+        setupListeners()
+    }
+
+    private fun setupListeners() {
         binding.topAppBar.setNavigationOnClickListener {
             findNavController().navigateUp()
         }
 
         binding.nameTextField.addTextChangedListener {
             name = it.toString()
-            flagEmptyField = false
             binding.apply {
                 nameLayout.error = null
-                buttonJobCreate.isChecked = updateStateButtonLogin()
+                buttonJobCreate.isChecked = isFormValid()
             }
         }
+
         binding.positionTextField.addTextChangedListener {
             position = it.toString()
-            flagEmptyField = false
             binding.apply {
                 positionLayout.error = null
-                buttonJobCreate.isChecked = updateStateButtonLogin()
+                buttonJobCreate.isChecked = isFormValid()
             }
         }
+
         binding.linkTextField.addTextChangedListener {
             link = it.toString()
         }
 
         binding.buttonJobCreate.setOnClickListener {
-            name.trim()
-            position.trim()
-            link.trim()
-
-            if (name.isEmpty()) {
-                binding.nameLayout.error = getString(R.string.empty_field)
-                flagEmptyField = true
-            }
-            if (position.isEmpty()) {
-                binding.positionLayout.error = getString(R.string.empty_field)
-                flagEmptyField = true
-            }
-
-            if (flagEmptyField) {
+            if (!validateForm()) {
                 return@setOnClickListener
             }
 
@@ -85,24 +83,26 @@ class NewJobFragment : Fragment() {
             val finishWork = binding.finishWork.text.toString()
 
             try {
-                val dateStart = LocalDate.parse(startWork, formatter)
-                    .atTime(0, 0)
-                    .atOffset(ZoneOffset.UTC)
-                val dateFinish =
-                    if (finishWork == getString(R.string.present_time)) null else LocalDate.parse(
-                        finishWork,
-                        formatter
-                    )
-                        .atTime(0, 0)
-                        .atOffset(ZoneOffset.UTC)
+                val dateStart = parseDate(startWork)
+
+                // finish может быть null если "по настоящее время"
+                val dateFinish: OffsetDateTime? = if (
+                    finishWork.isEmpty() ||
+                    finishWork == getString(R.string.present_time)
+                ) {
+                    null
+                } else {
+                    parseDate(finishWork)
+                }
 
                 jobViewModel.saveJob(
-                    name,
-                    position,
-                    link,
-                    dateStart,
-                    dateFinish ?: emptyOffsetDateTime
+                    name = name.trim(),
+                    position = position.trim(),
+                    link = link.trim().ifEmpty { null },
+                    startWork = dateStart,
+                    finishWork = dateFinish  // Теперь передаём null, а не emptyOffsetDateTime
                 )
+
                 findNavController().navigateUp()
 
             } catch (e: Exception) {
@@ -111,34 +111,79 @@ class NewJobFragment : Fragment() {
                     getString(R.string.invalid_date_format),
                     Toast.LENGTH_SHORT
                 ).show()
-                return@setOnClickListener
             }
         }
 
         binding.datePicker.setOnClickListener {
-            val dialogView =
-                LayoutInflater.from(requireContext()).inflate(R.layout.dialog_date_picker, null)
-            val dateStart = dialogView.findViewById<TextInputEditText>(R.id.dateStart)
-            val dateFinish = dialogView.findViewById<TextInputEditText>(R.id.dateFinish)
-            MaterialAlertDialogBuilder(requireContext())
-                .setView(dialogView)
-                .setPositiveButton(getString(R.string.ok)) { _, _ ->
-                    binding.buttonJobCreate.isChecked = updateStateButtonLogin()
-                    binding.startWork.text = dateStart.text.toString().trim()
-                    binding.finishWork.text =
-                        if (dateFinish.text!!.isEmpty())
-                            getString(R.string.present_time)
-                        else dateFinish.text.toString().trim()
-                }
-                .setNegativeButton(getString(R.string.cancel)) { _, _ -> }
-                .show()
+            showDatePickerDialog()
         }
-
-        return binding.root
     }
 
-    private fun updateStateButtonLogin(): Boolean {
+    private fun validateForm(): Boolean {
+        var isValid = true
+
+        name = name.trim()
+        position = position.trim()
+        link = link.trim()
+
+        if (name.isEmpty()) {
+            binding.nameLayout.error = getString(R.string.empty_field)
+            isValid = false
+        }
+
+        if (position.isEmpty()) {
+            binding.positionLayout.error = getString(R.string.empty_field)
+            isValid = false
+        }
+
+        val startWork = binding.startWork.text.toString()
+        if (startWork.isEmpty()) {
+            Toast.makeText(
+                requireContext(),
+                getString(R.string.select_start_date),
+                Toast.LENGTH_SHORT
+            ).show()
+            isValid = false
+        }
+
+        return isValid
+    }
+
+    private fun parseDate(dateString: String): OffsetDateTime {
+        return LocalDate.parse(dateString, formatter)
+            .atTime(0, 0)
+            .atOffset(ZoneOffset.UTC)
+    }
+
+    private fun showDatePickerDialog() {
+        val dialogView = LayoutInflater.from(requireContext())
+            .inflate(R.layout.dialog_date_picker, null)
+        val dateStart = dialogView.findViewById<TextInputEditText>(R.id.dateStart)
+        val dateFinish = dialogView.findViewById<TextInputEditText>(R.id.dateFinish)
+
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.select_dates)
+            .setView(dialogView)
+            .setPositiveButton(getString(R.string.ok)) { _, _ ->
+                val start = dateStart.text.toString().trim()
+                val finish = dateFinish.text.toString().trim()
+
+                binding.startWork.text = start
+                binding.finishWork.text = finish.ifEmpty {
+                    getString(R.string.present_time)
+                }
+                binding.buttonJobCreate.isChecked = isFormValid()
+            }
+            .setNegativeButton(getString(R.string.cancel), null)
+            .show()
+    }
+
+    private fun isFormValid(): Boolean {
         return name.isNotEmpty() && position.isNotEmpty()
     }
 
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
+    }
 }

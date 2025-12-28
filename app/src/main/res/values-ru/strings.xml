@@ -44,7 +44,6 @@
     <string name="connection_error">Ошибка соединения</string>
     <string name="select_date">Выберите дату</string>
     <string name="invalid_date_format">Неверный формат даты</string>
-    <string name="present_time">Время</string>
     <string name="empty_field">Пустое поле</string>
     <string name="ok">Ок</string>
     <string name="cancel">Отмена</string>
@@ -71,4 +70,11 @@
     <string name="in_search_work">В поиске работы</string>
     <string name="task_cancelled">Задача отменена</string>
     <string name="attachment_15MB">вложение > 15МБ</string>
+    <string name="remove_photo">Удалить фото</string>
+    <string name="repeat_password">Повторите пароль</string>
+    <string name="no_jobs">Нет данных о работе</string>
+    <string name="add_job">Добавить место работы</string>
+    <string name="present_time">по настоящее время</string>
+    <string name="select_start_date">Выберите дату начала</string>
+    <string name="select_dates">Выберите даты</string>
 </resources>

@@ -1,4 +1,3 @@
-// adapter/listeners/EventInteractionListener.kt
 package ru.netology.nework.adapter.listeners
 
 /**

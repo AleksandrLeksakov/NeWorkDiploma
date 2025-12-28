@@ -72,4 +72,10 @@
     <string name="in_search_work">In search work</string>
     <string name="task_cancelled">Task Cancelled</string>
     <string name="attachment_15MB"><![CDATA[attachment > 15MB]]></string>
+    <string name="remove_photo">Delete photo</string>
+    <string name="repeat_password">repeat_password</string>
+    <string name="no_jobs">no jobs</string>
+    <string name="add_job">add job</string>
+    <string name="select_start_date">select_start_date</string>
+    <string name="select_dates">select_dates</string>
 </resources>

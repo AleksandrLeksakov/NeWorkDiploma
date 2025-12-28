@@ -27,41 +27,56 @@ import ru.netology.nework.databinding.FragmentMapsBinding
 import ru.netology.nework.util.AppConst
 
 class MapsFragment : Fragment(), UserLocationObjectListener {
-    private lateinit var userLocation: UserLocationLayer
+
+    private var _binding: FragmentMapsBinding? = null
+    private val binding get() = _binding!!
+
+    // Используем nullable вместо lateinit
+    private var mapView: MapView? = null
+    private var userLocation: UserLocationLayer? = null
     private var placeMark: PlacemarkMapObject? = null
-    private lateinit var map: MapView
+
     private val gson = Gson()
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
-        val binding = FragmentMapsBinding.inflate(inflater, container, false)
-        map = binding.map
+        _binding = FragmentMapsBinding.inflate(inflater, container, false)
+
+        mapView = binding.map
         MapKitFactory.initialize(requireContext())
 
-        userLocation =
-            MapKitFactory.getInstance().createUserLocationLayer(binding.map.mapWindow)
-        userLocation.isVisible = true
-        userLocation.setObjectListener(this)
-
-
-        val imageProvider =
-            ImageProvider.fromResource(requireContext(), R.drawable.ic_location_on_24)
-        val inputListener = object : InputListener {
-            override fun onMapTap(map: Map, point: Point) = Unit
-            override fun onMapLongTap(map: Map, point: Point) {
-                if (placeMark == null) {
-                    placeMark = binding.map.mapWindow.map.mapObjects.addPlacemark()
-                }
-                placeMark?.apply {
-                    geometry = point
-                    setIcon(imageProvider)
+        mapView?.let { map ->
+            userLocation = MapKitFactory.getInstance()
+                .createUserLocationLayer(map.mapWindow)
+                .apply {
                     isVisible = true
+                    setObjectListener(this@MapsFragment)
+                }
+
+            val imageProvider = ImageProvider.fromResource(
+                requireContext(),
+                R.drawable.ic_location_on_24
+            )
+
+            val inputListener = object : InputListener {
+                override fun onMapTap(map: Map, point: Point) = Unit
+
+                override fun onMapLongTap(map: Map, point: Point) {
+                    if (placeMark == null) {
+                        placeMark = binding.map.mapWindow.map.mapObjects.addPlacemark()
+                    }
+                    placeMark?.apply {
+                        geometry = point
+                        setIcon(imageProvider)
+                        isVisible = true
+                    }
                 }
             }
+
+            map.mapWindow.map.addInputListener(inputListener)
         }
-        binding.map.mapWindow.map.addInputListener(inputListener)
 
         binding.topAppBar.setOnMenuItemClickListener { item ->
             when (item.itemId) {
@@ -73,7 +88,6 @@ class MapsFragment : Fragment(), UserLocationObjectListener {
                     findNavController().navigateUp()
                     true
                 }
-
                 else -> false
             }
         }
@@ -85,33 +99,41 @@ class MapsFragment : Fragment(), UserLocationObjectListener {
         return binding.root
     }
 
-
     override fun onStart() {
         super.onStart()
         MapKitFactory.getInstance().onStart()
-        map.onStart()
+        mapView?.onStart()
     }
 
     override fun onStop() {
-        map.onStop()
+        mapView?.onStop()
         MapKitFactory.getInstance().onStop()
         super.onStop()
     }
 
-    override fun onObjectAdded(userLoactionView: UserLocationView) {
-        userLocation.setAnchor(
-            PointF((map.width * 0.5).toFloat(), (map.height * 0.5).toFloat()),
-            PointF((map.width * 0.5).toFloat(), (map.height * 0.83).toFloat())
-        )
-        map.mapWindow.map.move(
-            CameraPosition(userLoactionView.arrow.geometry, 17f, 0f, 0f)
-        )
+    override fun onDestroyView() {
+        super.onDestroyView()
+        // Зануляем все ссылки на View-объекты
+        userLocation?.setObjectListener(null)
+        userLocation = null
+        placeMark = null
+        mapView = null
+        _binding = null
     }
 
-    override fun onObjectRemoved(p0: UserLocationView) {
+    override fun onObjectAdded(userLocationView: UserLocationView) {
+        mapView?.let { map ->
+            userLocation?.setAnchor(
+                PointF((map.width * 0.5).toFloat(), (map.height * 0.5).toFloat()),
+                PointF((map.width * 0.5).toFloat(), (map.height * 0.83).toFloat())
+            )
+            map.mapWindow.map.move(
+                CameraPosition(userLocationView.arrow.geometry, 17f, 0f, 0f)
+            )
+        }
     }
 
-    override fun onObjectUpdated(p0: UserLocationView, p1: ObjectEvent) {
-    }
+    override fun onObjectRemoved(p0: UserLocationView) = Unit
 
+    override fun onObjectUpdated(p0: UserLocationView, p1: ObjectEvent) = Unit
 }

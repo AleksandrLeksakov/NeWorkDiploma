@@ -1,4 +1,3 @@
-// adapter/listeners/PostInteractionListener.kt
 package ru.netology.nework.adapter.listeners
 
 /**

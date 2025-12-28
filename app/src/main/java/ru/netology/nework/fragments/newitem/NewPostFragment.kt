@@ -74,7 +74,9 @@ class NewPostFragment : Fragment() {
             if (uri != null) {
                 val file = uri.toFile(requireContext())!!
                 val size = file.length()
-                if (size > 15728640) {
+
+                // Используем константу вместо магического числа
+                if (size > AppConst.MAX_VIDEO_SIZE_BYTES) {
                     Toast.makeText(
                         requireContext(),
                         getString(R.string.attachment_15MB),
@@ -82,6 +84,7 @@ class NewPostFragment : Fragment() {
                     ).show()
                     return@registerForActivityResult
                 }
+
                 postViewModel.setAttachment(
                     uri,
                     file,
@@ -116,7 +119,8 @@ class NewPostFragment : Fragment() {
         binding.addPhoto.setOnClickListener {
             ImagePicker.Builder(this)
                 .crop()
-                .maxResultSize(2048, 2048)
+                // Используем константу вместо магического числа
+                .maxResultSize(AppConst.MAX_IMAGE_SIZE_PX, AppConst.MAX_IMAGE_SIZE_PX)
                 .createIntent {
                     startForPhotoResult.launch(it)
                 }
@@ -133,6 +137,7 @@ class NewPostFragment : Fragment() {
         binding.addLocation.setOnClickListener {
             findNavController().navigate(R.id.action_newPostFragment_to_mapsFragment)
         }
+
         setFragmentResultListener(AppConst.MAPS_FRAGMENT_RESULT) { _, bundle ->
             val point = gson.fromJson<Point>(bundle.getString(AppConst.MAP_POINT), pointToken)
             if (point != null) {
@@ -150,6 +155,7 @@ class NewPostFragment : Fragment() {
                 bundleOf(AppConst.SELECT_USER to true)
             )
         }
+
         setFragmentResultListener(AppConst.USERS_FRAGMENT_RESULT) { _, bundle ->
             val selectedUsers =
                 gson.fromJson<List<Long>>(bundle.getString(AppConst.SELECT_USER), usersToken)
@@ -157,7 +163,6 @@ class NewPostFragment : Fragment() {
                 postViewModel.setMentionId(selectedUsers)
             }
         }
-
 
         postViewModel.attachmentData.observe(viewLifecycleOwner) { attachment ->
             when (attachment?.attachmentType) {
@@ -167,7 +172,6 @@ class NewPostFragment : Fragment() {
                     binding.imageAttachmentContainer.isVisible = true
                 }
                 AttachmentType.VIDEO -> {}
-
                 AttachmentType.AUDIO -> {}
                 null -> {
                     binding.imageAttachment.isVisible = false
@@ -178,6 +182,7 @@ class NewPostFragment : Fragment() {
 
         val imageProvider =
             ImageProvider.fromResource(requireContext(), R.drawable.ic_location_on_24)
+
         postViewModel.editedPost.observe(viewLifecycleOwner) { post ->
             val point = if (post.coords != null) Point(post.coords.lat, post.coords.long) else null
             if (point != null) {
@@ -213,9 +218,7 @@ class NewPostFragment : Fragment() {
 
         return binding.root
     }
-
 }
-
 
 fun Uri.toFile(context: Context): File? {
     val inputStream = context.contentResolver.openInputStream(this)

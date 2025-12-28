@@ -2,7 +2,6 @@ package ru.netology.nework.fragments.newitem
 
 import android.app.Activity
 import android.os.Bundle
-import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -13,6 +12,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.net.toFile
 import androidx.core.os.bundleOf
 import androidx.core.view.isVisible
+import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.setFragmentResultListener
 import androidx.navigation.fragment.findNavController
@@ -31,7 +31,6 @@ import ru.netology.nework.fragments.dialog.BottomSheetNewEvent
 import ru.netology.nework.util.AndroidUtils.focusAndShowKeyboard
 import ru.netology.nework.util.AppConst
 import ru.netology.nework.viewmodel.EventViewModel
-import kotlin.toString
 
 class NewEventFragment : Fragment() {
     private val eventViewModel: EventViewModel by activityViewModels()
@@ -72,7 +71,9 @@ class NewEventFragment : Fragment() {
             if (uri != null) {
                 val file = uri.toFile(requireContext())!!
                 val size = file.length()
-                if (size > 15728640) {
+
+                // Используем константу вместо магического числа
+                if (size > AppConst.MAX_VIDEO_SIZE_BYTES) {
                     Toast.makeText(
                         requireContext(),
                         getString(R.string.attachment_15MB),
@@ -80,6 +81,7 @@ class NewEventFragment : Fragment() {
                     ).show()
                     return@registerForActivityResult
                 }
+
                 eventViewModel.setAttachment(
                     uri,
                     file,
@@ -119,7 +121,8 @@ class NewEventFragment : Fragment() {
         binding.addPhoto.setOnClickListener {
             ImagePicker.Builder(this)
                 .crop()
-                .maxResultSize(2048, 2048)
+                // Используем константу вместо магического числа
+                .maxResultSize(AppConst.MAX_IMAGE_SIZE_PX, AppConst.MAX_IMAGE_SIZE_PX)
                 .createIntent {
                     startForPhotoResult.launch(it)
                 }
@@ -154,6 +157,7 @@ class NewEventFragment : Fragment() {
                 bundleOf(AppConst.SELECT_USER to true)
             )
         }
+
         setFragmentResultListener(AppConst.USERS_FRAGMENT_RESULT) { _, bundle ->
             val selectedUsers =
                 gson.fromJson<List<Long>>(bundle.getString(AppConst.SELECT_USER), usersToken)
@@ -162,7 +166,6 @@ class NewEventFragment : Fragment() {
             }
         }
 
-
         eventViewModel.attachmentData.observe(viewLifecycleOwner) { attachment ->
             when (attachment?.attachmentType) {
                 AttachmentType.IMAGE -> {
@@ -170,11 +173,9 @@ class NewEventFragment : Fragment() {
                     binding.imageAttachmentContainer.isVisible = true
                     binding.imageAttachment.isVisible = true
                 }
-
                 AttachmentType.VIDEO -> {
                     println(attachment.uri)
                 }
-
                 AttachmentType.AUDIO -> {}
                 null -> {
                     binding.imageAttachmentContainer.isVisible = false
@@ -221,5 +222,4 @@ class NewEventFragment : Fragment() {
 
         return binding.root
     }
-
 }
