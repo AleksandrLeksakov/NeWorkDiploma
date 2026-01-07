@@ -31,10 +31,12 @@ class MapsFragment : Fragment(), UserLocationObjectListener {
     private var _binding: FragmentMapsBinding? = null
     private val binding get() = _binding!!
 
-    // Используем nullable вместо lateinit
     private var mapView: MapView? = null
     private var userLocation: UserLocationLayer? = null
     private var placeMark: PlacemarkMapObject? = null
+
+    // Перенесено в свойство фрагмента, чтобы избежать WeakReference проблемы
+    private var inputListener: InputListener? = null
 
     private val gson = Gson()
 
@@ -60,7 +62,8 @@ class MapsFragment : Fragment(), UserLocationObjectListener {
                 R.drawable.ic_location_on_24
             )
 
-            val inputListener = object : InputListener {
+            // Сохраняем в свойство фрагмента
+            inputListener = object : InputListener {
                 override fun onMapTap(map: Map, point: Point) = Unit
 
                 override fun onMapLongTap(map: Map, point: Point) {
@@ -75,7 +78,10 @@ class MapsFragment : Fragment(), UserLocationObjectListener {
                 }
             }
 
-            map.mapWindow.map.addInputListener(inputListener)
+            // Добавляем слушатель
+            inputListener?.let { listener ->
+                map.mapWindow.map.addInputListener(listener)
+            }
         }
 
         binding.topAppBar.setOnMenuItemClickListener { item ->
@@ -113,7 +119,11 @@ class MapsFragment : Fragment(), UserLocationObjectListener {
 
     override fun onDestroyView() {
         super.onDestroyView()
-        // Зануляем все ссылки на View-объекты
+        // Удаляем слушатель перед зануляением
+        inputListener?.let { listener ->
+            mapView?.mapWindow?.map?.removeInputListener(listener)
+        }
+        inputListener = null
         userLocation?.setObjectListener(null)
         userLocation = null
         placeMark = null
